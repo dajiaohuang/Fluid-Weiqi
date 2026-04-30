@@ -2,6 +2,12 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
+public struct PlayerInfo
+{
+	public string name;
+	public Color color;
+}
+
 public abstract class Match : MonoBehaviour
 {
 	public static Match Current { get; private set; }

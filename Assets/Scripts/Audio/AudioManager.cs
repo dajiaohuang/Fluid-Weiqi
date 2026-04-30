@@ -34,6 +34,8 @@ public class AudioManager : MonoBehaviour
 		Instance = this;
 		DontDestroyOnLoad(gameObject);
 
+		gameObject.AddComponent<AudioListener>();
+
 		// Create or get AudioSource
 		sfxSource = GetComponent<AudioSource>();
 		if(sfxSource == null)

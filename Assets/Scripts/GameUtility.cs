@@ -1,30 +1,50 @@
 using UnityEngine;
+using System.Linq;
+using System.Collections;
 
 public static class GameUtility
 {
-	public static PlayerInfo[] MakePlayerInfos(int count)
+	public static void ClearChildren(this Transform root)
 	{
-		return count switch
+		var targets = Enumerable.Range(0, root.childCount).Select(root.GetChild).ToArray();
+		foreach(var t in targets)
+			Object.Destroy(t.gameObject);
+	}
+
+	public static string ToLocalizedString(this LobbyVisibility value)
+	{
+		return value switch
 		{
-			2 => new PlayerInfo[]
-			{
-				new() { name = "黑方", color = Color.black, },
-				new() { name = "白方", color = Color.white, },
-			},
-			3 => new PlayerInfo[]
-			{
-				new() { name = "红方", color = Color.red, },
-				new() { name = "绿方", color = Color.green, },
-				new() { name = "蓝方", color = Color.blue, },
-			},
-			4 => new PlayerInfo[]
-			{
-				new() { name = "红方", color = Color.red, },
-				new() { name = "黄方", color = Color.yellow, },
-				new() { name = "蓝方", color = Color.blue, },
-				new() { name = "绿方", color = Color.green, },
-			},
-			_ => throw new System.NotImplementedException(),
+			LobbyVisibility.Local => "本地",
+			LobbyVisibility.Private => "私密",
+			LobbyVisibility.Public => "公开",
+			_ => null,
 		};
+	}
+
+	public static string ToLocalizedString(this PlayerType value)
+	{
+		return value switch
+		{
+			PlayerType.Local => "本地玩家",
+			PlayerType.Ai => "AI 玩家",
+			PlayerType.Online => "在线玩家",
+			_ => null,
+		};
+	}
+
+	public static string ToLocalizedString(this MatchMode value)
+	{
+		return value switch
+		{
+			MatchMode.Traditional => "传统模式",
+			MatchMode.Training => "训练模式",
+			_ => null,
+		};
+	}
+
+	public static bool IsValidIndex(this IList list, int i)
+	{
+		return i >= 0 && i < list.Count;
 	}
 }

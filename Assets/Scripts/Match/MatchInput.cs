@@ -5,7 +5,7 @@ public class MatchInput : MonoBehaviour
 {
 	const float PreviewPositionEpsilon = 1e-3f;
 
-	Camera Camera => GameManager.Instance != null ? GameManager.Instance.Camera : null;
+	Camera Camera => Camera.main;
 	LayerMask RaycastMask => Physics.DefaultRaycastLayers;
 
 	bool hasCursorPosition;
