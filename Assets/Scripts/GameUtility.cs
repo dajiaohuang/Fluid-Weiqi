@@ -33,16 +33,6 @@ public static class GameUtility
 		};
 	}
 
-	public static string ToLocalizedString(this MatchMode value)
-	{
-		return value switch
-		{
-			MatchMode.Traditional => "传统模式",
-			MatchMode.Training => "训练模式",
-			_ => null,
-		};
-	}
-
 	public static bool IsValidIndex(this IList list, int i)
 	{
 		return i >= 0 && i < list.Count;

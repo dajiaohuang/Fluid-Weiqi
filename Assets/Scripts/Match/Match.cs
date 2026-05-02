@@ -2,16 +2,10 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
-public enum MatchMode
-{
-	Traditional = 1,
-	Training = 0xffff,
-}
-
 [System.Serializable]
 public struct MatchRule
 {
-	public MatchMode mode;
+	public string modeId;
 	public int boardSize;
 	public float stoneHardness;
 }
@@ -45,7 +39,6 @@ public abstract class Match : MonoBehaviour
 
 	protected void Start()
 	{
-		ui = MakeUi();
 		CurrentPlayerIndex = 0;
 	}
 
@@ -63,11 +56,6 @@ public abstract class Match : MonoBehaviour
 			input = null;
 		}
 
-		if(ui != null)
-		{
-			Destroy(ui);
-			ui = null;
-		}
 	}
 	#endregion
 
@@ -80,6 +68,18 @@ public abstract class Match : MonoBehaviour
 	}
 
 	protected bool LastPlacementSucceed { get; private set; } = false;
+
+	protected Action onEnd;
+	public event Action OnEnd
+	{
+		add => onEnd += value;
+		remove => onEnd -= value;
+	}
+
+	protected void EndMatch()
+	{
+		onEnd?.Invoke();
+	}
 	#endregion
 
 	#region Input
@@ -181,12 +181,6 @@ public abstract class Match : MonoBehaviour
 			playerColors[i] = PlayerInfos[i].color;
 		BoardUtility.RenderAnalysis(board.Caches, renderState, playerColors);
 	}
-	#endregion
-
-	#region UI
-	GameObject ui;
-
-	protected abstract GameObject MakeUi();
 	#endregion
 
 	#region Players

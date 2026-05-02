@@ -6,72 +6,29 @@ public class MatchBuilder : MonoBehaviour
 {
 	#region References
 	[SerializeField] Transform uiRoot;
-	[SerializeField] Transform boardAnchor;
-
-	GameObject standardBoardPrefab;
-
-	Match match;
-	Board board;
 	#endregion
 
 	#region Build
 	void BuildMatch()
 	{
-		board = MakeStandardBoard();
-		InitializeBoard(board);
-		match = MakeMatchController(Lobby.Current.MatchRule.mode);
-		InitializeMatch(match, board);
-
-		switch(Lobby.Current.MatchRule.mode)
-		{
-			case MatchMode.Traditional:
-				break;
-
-			case MatchMode.Training:
-				break;
-
-			default:
-				// TODO
-				throw new System.NotSupportedException($"Cannot build match for {Lobby.Current.MatchRule.mode}, not supported.");
-		}
-	}
-
-	Board MakeStandardBoard()
-	{
-		if(standardBoardPrefab == null)
-			standardBoardPrefab = Resources.Load<GameObject>("Prefabs/Boards/Standard");
-		var go = Instantiate(standardBoardPrefab, boardAnchor);
-		return go.GetComponent<Board>();
-	}
-
-	Match MakeMatchController(MatchMode mode)
-	{
-		GameObject host = uiRoot != null ? uiRoot.gameObject : gameObject;
-		return mode switch
-		{
-			MatchMode.Traditional => host.AddComponent<TraditionalMatch>(),
-			MatchMode.Training => host.AddComponent<TrainingMatch>(),
-			_ => throw new System.NotSupportedException($"Cannot create match controller for {mode}, not supported."),
-		};
-	}
-
-	void InitializeBoard(Board targetBoard)
-	{
-		if(targetBoard == null)
-			throw new MissingReferenceException("Failed to create board for match build.");
+		if(GameManager.Instance == null)
+			throw new MissingReferenceException("GameManager is missing while building match.");
 
 		MatchRule rule = Lobby.Current.MatchRule;
+		if(!GameManager.Instance.TryGetMatchModeConfig(rule.modeId, out MatchModeConfig modeConfig))
+			throw new System.NotSupportedException($"Cannot build match, mode config not found: {rule.modeId}");
+
 		List<PlayerInfo> playerInfos = BuildPlayerInfos();
-		targetBoard.SetState(new BoardState(playerInfos.Count, rule.boardSize));
-		targetBoard.PlayerColors = playerInfos.Select(info => info.color).ToArray();
-	}
+		MatchBuildContext context = new MatchBuildContext()
+		{
+			Rule = rule,
+			PlayerInfos = playerInfos,
+			UiRoot = uiRoot,
+			MatchRoot = transform,
+			MatchSkinPrefab = GameManager.Instance.DefaultMatchSkinPrefab,
+		};
 
-	void InitializeMatch(Match targetMatch, Board targetBoard)
-	{
-		if(targetMatch == null)
-			throw new MissingReferenceException("Failed to create match controller for match build.");
-
-		targetMatch.PlayerInfos = BuildPlayerInfos();
+		modeConfig.BuildMatch(context);
 	}
 
 	List<PlayerInfo> BuildPlayerInfos()
@@ -94,7 +51,27 @@ public class MatchBuilder : MonoBehaviour
 			Debug.LogWarning("No lobby present, building default match.");
 			GameManager.Instance.LoadDefaultLobby();
 		}
+
+		if(!Lobby.Current.ValidateStartingCondition(out string errorMessage))
+		{
+			Debug.LogError($"Failed to build match: {errorMessage}");
+			GameManager.Instance.LoadDefaultLobby();
+			GameManager.Instance.SwitchScene(GameScene.Lobby);
+			Destroy(this);
+			return;
+		}
+
 		BuildMatch();
+		Destroy(this);
 	}
 	#endregion
+}
+
+public sealed class MatchBuildContext
+{
+	public MatchRule Rule { get; set; }
+	public IReadOnlyList<PlayerInfo> PlayerInfos { get; set; }
+	public Transform UiRoot { get; set; }
+	public Transform MatchRoot { get; set; }
+	public GameObject MatchSkinPrefab { get; set; }
 }

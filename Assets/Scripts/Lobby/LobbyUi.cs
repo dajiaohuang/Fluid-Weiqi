@@ -33,7 +33,7 @@ public class LobbyUi : MonoBehaviour
 		ReconstructPlayerSlots();
 
 		// Match rule
-		SetMatchModeOptions(allMatchModes);
+		SetMatchModeOptions(GameManager.Instance != null ? GameManager.Instance.LegacyMatchModeConfigs : new List<MatchModeConfig>());
 		matchModeDropdown.onValueChanged.AddListener(OnMatchModeDropdownValueChanged);
 		boardSizeSlider.onValueChanged.AddListener(OnBoardSizeSliderValueChanged);
 		stoneHardnessSlider.onValueChanged.AddListener(OnStoneHardnessSliderValueChanged);
@@ -185,31 +185,37 @@ public class LobbyUi : MonoBehaviour
 	[SerializeField] Text stoneHardnessText;
 	[SerializeField] Slider stoneHardnessSlider;
 
-	static readonly MatchMode[] allMatchModes = new MatchMode[]
-	{
-		MatchMode.Traditional,
-		MatchMode.Training,
-	};
-
-	readonly List<MatchMode> matchModeOptions = new();
-	void SetMatchModeOptions(IList<MatchMode> options)
+	readonly List<MatchModeConfig> matchModeOptions = new();
+	void SetMatchModeOptions(IReadOnlyList<MatchModeConfig> options)
 	{
 		matchModeOptions.Clear();
-		matchModeOptions.AddRange(options);
+		matchModeOptions.AddRange(options.Where(o => o != null));
+
 		matchModeDropdown.options = matchModeOptions
-			.Select(m => new Dropdown.OptionData(m.ToLocalizedString()))
+			.Select(m => new Dropdown.OptionData(m.DisplayName))
 			.ToList();
 
-		int index = matchModeOptions.IndexOf(Lobby.Current.MatchRule.mode);
+		int index = matchModeOptions.FindIndex(m => m.ModeId == Lobby.Current.MatchRule.modeId);
 		if(index == -1)
+		{
+			if(matchModeOptions.Count == 0)
+			{
+				matchModeDropdown.value = 0;
+				return;
+			}
 			index = 0;
+		}
+
 		matchModeDropdown.value = index;
 	}
 
 	void OnMatchModeDropdownValueChanged(int index)
 	{
+		if(!matchModeOptions.IsValidIndex(index))
+			return;
+
 		var rule = Lobby.Current.MatchRule;
-		rule.mode = matchModeOptions[index];
+		rule.modeId = matchModeOptions[index].ModeId;
 		HostLobby.Current?.SetMatchRule(rule);
 	}
 

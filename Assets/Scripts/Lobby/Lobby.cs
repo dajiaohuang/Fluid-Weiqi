@@ -87,8 +87,41 @@ public abstract class Lobby
 
 	public bool ValidateStartingCondition(out string errorMessage)
 	{
-		// TODO
 		errorMessage = null;
+
+		if(Players == null || Players.Count < 2)
+		{
+			errorMessage = "至少需要 2 名玩家才能开始对局。";
+			return false;
+		}
+
+		if(GameManager.Instance == null)
+		{
+			errorMessage = "GameManager 未初始化。";
+			return false;
+		}
+
+		if(string.IsNullOrWhiteSpace(MatchRule.modeId))
+		{
+			errorMessage = "未设置对局模式。";
+			return false;
+		}
+
+		if(!GameManager.Instance.TryGetMatchModeConfig(MatchRule.modeId, out MatchModeConfig modeConfig))
+		{
+			errorMessage = $"未找到对局模式配置: {MatchRule.modeId}";
+			return false;
+		}
+
+		if(IsOnline && modeConfig.IsDlcMode)
+		{
+			errorMessage = "联机模式暂不支持 DLC 对局模式。";
+			return false;
+		}
+
+		if(!modeConfig.ValidateRules(MatchRule, this, out errorMessage))
+			return false;
+
 		return true;
 	}
 	#endregion

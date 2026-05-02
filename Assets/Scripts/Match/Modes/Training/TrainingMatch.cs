@@ -2,12 +2,6 @@ using UnityEngine;
 
 public class TrainingMatch : Match
 {
-	protected override GameObject MakeUi()
-	{
-		var go = Instantiate(Resources.Load<GameObject>("UI/Match/Training"), transform);
-		return go;
-	}
-
 	#region Input
 	protected override void OnRemove(Vector2 position)
 	{

@@ -37,9 +37,15 @@ public class HostLobby : Lobby
 		};
 	}
 
-	public HostLobby()
+	public HostLobby(string defaultMatchModeId)
 	{
 		players.AddRange(MakeDefaultPlayerList());
+		matchRule = new MatchRule
+		{
+			modeId = defaultMatchModeId,
+			boardSize = 19,
+			stoneHardness = 1f,
+		};
 	}
 	#endregion
 
@@ -116,12 +122,7 @@ public class HostLobby : Lobby
 	#endregion
 
 	#region Match rules
-	MatchRule matchRule = new()
-	{
-		mode = MatchMode.Traditional,
-		boardSize = 19,
-		stoneHardness = 1f,
-	};
+	MatchRule matchRule;
 	public override MatchRule MatchRule => matchRule;
 	public void SetMatchRule(MatchRule value)
 	{
