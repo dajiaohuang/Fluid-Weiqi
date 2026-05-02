@@ -43,9 +43,14 @@ public class GameManager : MonoBehaviour
 	#region Lobby
 	public Lobby Lobby { get; private set; } = null;
 
-	public void CreateLobby()
+	public void LoadDefaultLobby()
 	{
 		Lobby = new HostLobby();
+	}
+
+	public void CreateLobby()
+	{
+		LoadDefaultLobby();
 		SwitchScene(GameScene.Lobby);
 	}
 
@@ -53,23 +58,6 @@ public class GameManager : MonoBehaviour
 	{
 		SwitchScene(GameScene.StartMenu);
 		Lobby = null;
-	}
-	#endregion
-
-	#region Match
-	public void StartMatch()
-	{
-		if(Lobby == null)
-		{
-			Debug.LogError($"Cannot start match, no active lobby.");
-			return;
-		}
-		SwitchScene(GameScene.Match);
-	}
-
-	public void EndMatch()
-	{
-		SwitchScene(GameScene.Lobby);
 	}
 	#endregion
 

@@ -4,7 +4,7 @@ public class TrainingMatch : Match
 {
 	protected override GameObject MakeUi()
 	{
-		var go = Instantiate(Resources.Load<GameObject>("Prefabs/Training Match UI"), transform);
+		var go = Instantiate(Resources.Load<GameObject>("UI/Match/Training"), transform);
 		return go;
 	}
 

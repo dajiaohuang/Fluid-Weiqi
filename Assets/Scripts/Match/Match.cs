@@ -2,6 +2,20 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
+public enum MatchMode
+{
+	Traditional = 1,
+	Training = 0xffff,
+}
+
+[System.Serializable]
+public struct MatchRule
+{
+	public MatchMode mode;
+	public int boardSize;
+	public float stoneHardness;
+}
+
 public struct PlayerInfo
 {
 	public string name;

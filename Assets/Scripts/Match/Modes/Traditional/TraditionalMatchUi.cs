@@ -1,8 +1,8 @@
 using UnityEngine;
 
-public class TraditionalGameUi : MonoBehaviour
+public class TraditionalTrainingUi : MonoBehaviour
 {
-	[SerializeField] TraditionalGameEndingUi ending;
+	[SerializeField] TraditionalMatchEndingUi ending;
 
 	protected void Awake()
 	{
@@ -16,6 +16,6 @@ public class TraditionalGameUi : MonoBehaviour
 
 	public void ReturnToMenu()
 	{
-		GameManager.Instance.EndMatch();
+		// TODO
 	}
 }

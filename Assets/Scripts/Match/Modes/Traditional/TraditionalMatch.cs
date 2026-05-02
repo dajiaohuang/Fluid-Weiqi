@@ -3,12 +3,12 @@ using UnityEngine;
 public class TraditionalMatch : Match
 {
 	#region UI
-	TraditionalGameUi ui;
+	TraditionalTrainingUi ui;
 
 	protected override GameObject MakeUi()
 	{
-		var go = Instantiate(Resources.Load<GameObject>("Prefabs/Traditional Match UI"), transform);
-		ui = go.GetComponent<TraditionalGameUi>();
+		var go = Instantiate(Resources.Load<GameObject>("UI/Match/Traditional"), transform);
+		ui = go.GetComponent<TraditionalTrainingUi>();
 		return go;
 	}
 	#endregion

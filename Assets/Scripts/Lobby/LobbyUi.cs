@@ -6,11 +6,6 @@ using System.Linq;
 public class LobbyUi : MonoBehaviour
 {
 	#region Unity life cycle
-	protected void Awake()
-	{
-		playerSlotPrefab = Resources.Load<GameObject>("Prefabs/Player Slot");
-	}
-
 	protected void Start()
 	{
 #if DEBUG && UNITY_EDITOR
@@ -21,6 +16,9 @@ public class LobbyUi : MonoBehaviour
 			return;
 		}
 #endif
+
+		Lobby.Current.OnDismissed += OnLobbyDismissed;
+		Lobby.Current.OnStartingMatch += OnStartingMatch;
 
 		// Lobby settings
 		SetVisibilityOptions(allVisibilityOptions);
@@ -51,6 +49,8 @@ public class LobbyUi : MonoBehaviour
 	{
 		if(Lobby.Current != null)
 		{
+			Lobby.Current.OnDismissed -= OnLobbyDismissed;
+			Lobby.Current.OnStartingMatch -= OnStartingMatch;
 			Lobby.Current.OnVisibilityChanged -= OnVisibilityChanged;
 			Lobby.Current.OnPlayersChanged -= OnPlayersChanged;
 			Lobby.Current.OnMatchRuleChanged -= OnMatchRuleChanged;
@@ -59,10 +59,34 @@ public class LobbyUi : MonoBehaviour
 	#endregion
 
 	#region Life cycle
-	public void LeaveLobby()
+	public void OnCloseButtonClicked()
 	{
-		// TODO: Notify host as player
+		if(Lobby.Current?.IsHost ?? true)
+			HostLobby.Current?.Dismiss();
+		else
+			LeaveLobby();
+	}
+
+	void ReturnToStartMenu()
+	{
 		GameManager.Instance.SwitchScene(GameScene.StartMenu);
+	}
+
+	void LeaveLobby()
+	{
+		// TODO: Notify host
+		ReturnToStartMenu();
+	}
+
+	void OnLobbyDismissed()
+	{
+		// TODO: Show message
+		ReturnToStartMenu();
+	}
+
+	void OnStartingMatch()
+	{
+		GameManager.Instance.SwitchScene(GameScene.Match);
 	}
 	#endregion
 
@@ -115,13 +139,8 @@ public class LobbyUi : MonoBehaviour
 			// TODO: Fill in lobby name text.
 		}
 
-		if(Lobby.Current.Visibility != LobbyVisibility.Private)
-			invitationCodeRow.SetActive(false);
-		else
-		{
-			invitationCodeRow.SetActive(true);
-			invitationCodeText.text = "KFCTHURVME50";  // TODO
-		}
+		invitationCodeRow.SetActive(Lobby.Current.Visibility == LobbyVisibility.Private);
+		invitationCodeText.text = Lobby.Current?.GetInvitationCode();
 	}
 
 	[SerializeField] GameObject lobbyNameRow;
@@ -134,7 +153,6 @@ public class LobbyUi : MonoBehaviour
 	#region Player settings
 	[Header("Player settings")]
 	[SerializeField] Transform playerSlotList;
-	static GameObject playerSlotPrefab;
 
 	[SerializeField] Button addPlayerButton;
 
@@ -148,11 +166,7 @@ public class LobbyUi : MonoBehaviour
 		GameUtility.ClearChildren(playerSlotList);
 
 		foreach(var player in Lobby.Current.Players)
-		{
-			var slotGo = Instantiate(playerSlotPrefab, playerSlotList);
-			var slot = slotGo.GetComponent<LobbyPlayerSlot>();
-			slot.Descriptor = player;
-		}
+			LobbyPlayerSlot.Make(player, playerSlotList);
 
 		addPlayerButton.interactable = Lobby.Current.IsHost && Lobby.Current.Players.Count < 4;
 	}
@@ -235,21 +249,15 @@ public class LobbyUi : MonoBehaviour
 
 	void RefreshFooterArea()
 	{
-		bool valid = ValidateStartingCondition(out string errorMessage);
+		bool valid = Lobby.Current.ValidateStartingCondition(out string errorMessage);
 		startButton.interactable = valid;
 		errorText.gameObject.SetActive(!valid);
 		errorText.text = errorMessage;
 	}
 
-	bool ValidateStartingCondition(out string errorMessage)
-	{
-		errorMessage = null;
-		return true;
-	}
-
 	public void OnStartButtonClicked()
 	{
-		// TODO
+		HostLobby.Current?.StartMatch();
 	}
 	#endregion
 }

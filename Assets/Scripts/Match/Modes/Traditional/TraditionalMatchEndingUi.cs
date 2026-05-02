@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 
-public class TraditionalGameEndingUi : MonoBehaviour
+public class TraditionalMatchEndingUi : MonoBehaviour
 {
 	[SerializeField] Text resultText;
 

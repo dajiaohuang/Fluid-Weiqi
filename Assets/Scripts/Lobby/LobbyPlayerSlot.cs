@@ -5,6 +5,21 @@ using System.Linq;
 
 public class LobbyPlayerSlot : MonoBehaviour
 {
+	static GameObject prefab;
+
+	protected void Awake()
+	{
+		prefab ??= Resources.Load<GameObject>("UI/Lobby/Player Slot");
+	}
+
+	public static LobbyPlayerSlot Make(PlayerDescriptor descriptor, Transform root = null)
+	{
+		var go = Instantiate(prefab, root);
+		var slot = go.GetComponent<LobbyPlayerSlot>();
+		slot.Descriptor = descriptor;
+		return slot;
+	}
+
 	public PlayerDescriptor Descriptor { get; set; }
 	int Index => Descriptor?.Index ?? -1;
 	readonly List<PlayerType> typeOptions = new() { PlayerType.Local, PlayerType.Ai };

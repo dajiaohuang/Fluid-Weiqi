@@ -23,6 +23,6 @@ public class PauseMenuUi : MonoBehaviour
 
 	public void EndMatch()
 	{
-		GameManager.Instance.EndMatch();
+		// TODO
 	}
 }

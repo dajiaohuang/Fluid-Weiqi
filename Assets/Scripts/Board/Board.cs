@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class Board : MonoBehaviour
 {
-	public static Board Current {  get; private set; }
+	public static Board Current { get; private set; }
 
 	#region Constants
 	const string DisplayShaderResourcePath = "Shaders/BoardDisplay";
