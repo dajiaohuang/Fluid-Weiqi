@@ -51,6 +51,7 @@ public class BoardState
 	}
 
 	public float Size { get; private set; } = 19;
+	public float BoardStateExtent => Size - 1;
 	public float StoneVariance { get; set; } = 1f / Mathf.Sqrt(16);
 	public float Threshold { get; set; } = .5f;
 
@@ -80,7 +81,7 @@ public class BoardState
 		return stones[player];
 	}
 
-	public bool TryFindNearestStone(Vector2 logicalPosition, float maxDistance, out int player, out int stoneIndex)
+	public bool TryFindNearestStone(Vector2 absolutePosition, float maxDistance, out int player, out int stoneIndex)
 	{
 		player = -1;
 		stoneIndex = -1;
@@ -91,7 +92,7 @@ public class BoardState
 			IReadOnlyList<StonePlacement> playerStones = stones[p];
 			for(int i = 0; i < playerStones.Count; ++i)
 			{
-				float sqr = (playerStones[i].position - logicalPosition).sqrMagnitude;
+				float sqr = (playerStones[i].position - absolutePosition).sqrMagnitude;
 				if(sqr < bestSqr)
 				{
 					bestSqr = sqr;
@@ -104,16 +105,21 @@ public class BoardState
 		return player >= 0;
 	}
 
-	public bool TryRemoveStoneAtLogicalPosition(Vector2 position, out BoardState newState, float searchRadius = 0.5f)
+	public bool TryRemoveStoneAtAbsolutePosition(Vector2 absolutePosition, out BoardState newState, float searchRadius = 0.5f)
 	{
 		newState = null;
 
-		if(!TryFindNearestStone(position, searchRadius, out int player, out int stoneIndex))
+		if(!TryFindNearestStone(absolutePosition, searchRadius, out int player, out int stoneIndex))
 			return false;
 
 		newState = new(this);
 		newState.RemoveStoneAt(player, stoneIndex);
 		return true;
+	}
+
+	public bool TryRemoveStoneAtLogicalPosition(Vector2 position, out BoardState newState, float searchRadius = 0.5f)
+	{
+		return TryRemoveStoneAtAbsolutePosition(position, out newState, searchRadius);
 	}
 
 	StonePlacement CreateStone(Vector2 position, float strength)

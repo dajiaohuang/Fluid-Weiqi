@@ -21,18 +21,18 @@ public class StandardBoard : Board
 		return transform.TransformPoint(new Vector3(boardLocalPosition.x, boardLocalPosition.y, 0));
 	}
 
-	public override Vector2 BoardLocalToLogicalPosition(Vector2 boardLocalPosition)
+	public override Vector2 BoardLocalToAbsolutePosition(Vector2 boardLocalPosition)
 	{
-		float span = State.Size - 1;
+		float span = State.BoardStateExtent;
 		return new Vector2((boardLocalPosition.x + .5f) * span, (boardLocalPosition.y + .5f) * span);
 	}
 
-	public override Vector2 LogicalToBoardLocalPosition(Vector2 logicalPosition)
+	public override Vector2 AbsoluteToBoardLocalPosition(Vector2 absolutePosition)
 	{
-		float span = State.Size - 1;
+		float span = State.BoardStateExtent;
 		return new Vector2(
-			logicalPosition.x / span - .5f,
-			logicalPosition.y / span - .5f
+			absolutePosition.x / span - .5f,
+			absolutePosition.y / span - .5f
 		);
 	}
 

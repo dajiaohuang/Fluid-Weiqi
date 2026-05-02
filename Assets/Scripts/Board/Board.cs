@@ -222,17 +222,27 @@ public abstract class Board : MonoBehaviour
 	public abstract Bounds GetWorldBounds();
 	public abstract Vector2 WorldToBoardLocalPosition(Vector3 worldPosition);
 	public abstract Vector3 BoardLocalToWorldPosition(Vector2 boardLocalPosition);
-	public abstract Vector2 BoardLocalToLogicalPosition(Vector2 boardLocalPosition);
-	public abstract Vector2 LogicalToBoardLocalPosition(Vector2 logicalPosition);
+	public abstract Vector2 BoardLocalToAbsolutePosition(Vector2 boardLocalPosition);
+	public abstract Vector2 AbsoluteToBoardLocalPosition(Vector2 absolutePosition);
+
+	public Vector2 WorldToAbsolutePosition(Vector3 worldPosition)
+	{
+		return BoardLocalToAbsolutePosition(WorldToBoardLocalPosition(worldPosition));
+	}
+
+	public Vector3 AbsoluteToWorldPosition(Vector2 absolutePosition)
+	{
+		return BoardLocalToWorldPosition(AbsoluteToBoardLocalPosition(absolutePosition));
+	}
 
 	public Vector2 WorldToLogicalPosition(Vector3 worldPosition)
 	{
-		return BoardLocalToLogicalPosition(WorldToBoardLocalPosition(worldPosition));
+		return WorldToAbsolutePosition(worldPosition);
 	}
 
 	public Vector3 LogicalToWorldPosition(Vector2 logicalPosition)
 	{
-		return BoardLocalToWorldPosition(LogicalToBoardLocalPosition(logicalPosition));
+		return AbsoluteToWorldPosition(logicalPosition);
 	}
 	#endregion
 }

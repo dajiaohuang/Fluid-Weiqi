@@ -144,7 +144,7 @@ public abstract class Match : MonoBehaviour
 
 		BoardState state = board.State;
 
-		if(IsOccupiedAtLogicalPosition(board, state, position))
+		if(IsOccupiedAtAbsolutePosition(board, state, position))
 		{
 			board.ClearPreview();
 			return false;
@@ -162,12 +162,12 @@ public abstract class Match : MonoBehaviour
 		return true;
 	}
 
-	bool IsOccupiedAtLogicalPosition(Board board, BoardState renderState, Vector2 position)
+	bool IsOccupiedAtAbsolutePosition(Board board, BoardState renderState, Vector2 position)
 	{
 		AnalyzeState(renderState);
 		if(board == null || board.Caches == null)
 			return false;
-		return BoardUtility.IsOccupiedAtLogicalPosition(board.Caches, renderState, position);
+		return BoardUtility.IsOccupiedAtAbsolutePosition(board.Caches, renderState, position);
 	}
 
 	void AnalyzeState(BoardState renderState)
