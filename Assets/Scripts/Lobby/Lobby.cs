@@ -10,6 +10,14 @@ public enum LobbyVisibility
 
 public struct LobbyLocator
 {
+	public string id;
+
+	public LobbyLocator(string id)
+	{
+		this.id = id;
+	}
+
+	public bool IsValid => !string.IsNullOrWhiteSpace(id);
 }
 
 public enum PlayerType
@@ -19,6 +27,39 @@ public enum PlayerType
 
 public struct PlayerLocator
 {
+	public string id;
+
+	public PlayerLocator(string id)
+	{
+		this.id = id;
+	}
+
+	public bool IsValid => !string.IsNullOrWhiteSpace(id);
+
+	public override string ToString()
+	{
+		return id ?? string.Empty;
+	}
+
+	public override bool Equals(object obj)
+	{
+		return obj is PlayerLocator other && string.Equals(id, other.id, StringComparison.Ordinal);
+	}
+
+	public override int GetHashCode()
+	{
+		return id != null ? StringComparer.Ordinal.GetHashCode(id) : 0;
+	}
+
+	public static bool operator ==(PlayerLocator left, PlayerLocator right)
+	{
+		return left.Equals(right);
+	}
+
+	public static bool operator !=(PlayerLocator left, PlayerLocator right)
+	{
+		return !left.Equals(right);
+	}
 }
 
 public class PlayerDescriptor
@@ -91,9 +132,28 @@ public abstract class Lobby
 
 	#region Players
 	public abstract List<PlayerDescriptor> Players { get; }
+	public abstract PlayerLocator LocalPlayerLocator { get; }
 	public PlayerDescriptor HostPlayer => Players.FirstOrDefault(p => p.isHost);
-	public IEnumerable<PlayerDescriptor> UniqueOnlinePlayers => Players.Where(p => p.type == PlayerType.Online).Distinct();
+	public IEnumerable<PlayerDescriptor> UniqueOnlinePlayers => Players
+		.Where(p => p != null && p.type == PlayerType.Online)
+		.GroupBy(p => p.locator)
+		.Select(g => g.First());
 	public Action OnPlayersChanged;
+
+	public bool IsOwnedByLocal(PlayerDescriptor descriptor)
+	{
+		if(descriptor == null)
+			return false;
+
+		if(LocalPlayerLocator.IsValid && descriptor.locator.IsValid)
+			return descriptor.locator == LocalPlayerLocator;
+
+		// Backward compatibility while locator data is still being wired.
+		if(IsHost)
+			return descriptor.type != PlayerType.Online;
+
+		return false;
+	}
 	#endregion
 
 	#region Match rules

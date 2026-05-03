@@ -6,14 +6,21 @@ using System.Linq;
 public class HostLobby : Lobby
 {
 	public new static HostLobby Current => Lobby.Current as HostLobby;
+	public static readonly PlayerLocator HostPlayerLocator = new("host");
 
 	#region Creation
+	static PlayerLocator MakeRemotePlayerLocator(int i)
+	{
+		return new PlayerLocator($"remote-{i}");
+	}
+
 	static IEnumerable<PlayerDescriptor> MakeDefaultPlayerList()
 	{
 		yield return new()
 		{
 			type = PlayerType.Local,
 			isHost = true,
+			locator = HostPlayerLocator,
 
 			color = Color.black,
 		};
@@ -21,6 +28,7 @@ public class HostLobby : Lobby
 		{
 			type = PlayerType.Ai,
 			isHost = false,
+			locator = HostPlayerLocator,
 			aiId = LaoSongAiConfig.Id,
 
 			color = Color.white,
@@ -33,6 +41,7 @@ public class HostLobby : Lobby
 		{
 			type = PlayerType.Local,
 			isHost = false,
+			locator = HostPlayerLocator,
 
 			color = new Color[] { Color.red, Color.green, Color.blue, Color.yellow }[i],
 		};
@@ -82,6 +91,7 @@ public class HostLobby : Lobby
 	#region Players
 	readonly List<PlayerDescriptor> players = new();
 	public override List<PlayerDescriptor> Players => players;
+	public override PlayerLocator LocalPlayerLocator => HostPlayerLocator;
 
 	public void SetPlayerType(int i, PlayerType type)
 	{
@@ -98,6 +108,9 @@ public class HostLobby : Lobby
 
 		PlayerDescriptor player = players[i];
 		player.type = type;
+		player.locator = type == PlayerType.Online
+			? MakeRemotePlayerLocator(i)
+			: HostPlayerLocator;
 		if(type == PlayerType.Ai)
 		{
 			if(string.IsNullOrWhiteSpace(player.aiId) && GameManager.Instance != null)

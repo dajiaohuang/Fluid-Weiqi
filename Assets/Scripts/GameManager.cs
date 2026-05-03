@@ -159,6 +159,11 @@ public class GameManager : MonoBehaviour
 		Lobby = new HostLobby(DefaultMatchModeId);
 	}
 
+	public void LoadClientLobby(LobbyLocator lobbyLocator, PlayerLocator localPlayerLocator, LobbyVisibility visibility, MatchRule matchRule, IReadOnlyList<PlayerDescriptor> snapshotPlayers)
+	{
+		Lobby = new ClientLobby(lobbyLocator, localPlayerLocator, visibility, matchRule, snapshotPlayers);
+	}
+
 	public void CreateLobby()
 	{
 		LoadDefaultLobby();

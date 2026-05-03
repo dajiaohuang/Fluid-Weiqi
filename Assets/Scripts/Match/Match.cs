@@ -267,20 +267,38 @@ public abstract class Match : MonoBehaviour
 		return fallback;
 	}
 
+	OnlinePlayer CreateOnlinePlayer(int playerIndex, OnlinePlayerRole role)
+	{
+		OnlinePlayer online = gameObject.AddComponent<OnlinePlayer>();
+		online.Initialize(this, playerIndex, role);
+		return online;
+	}
+
 	MatchPlayer CreateRuntimePlayer(int playerIndex)
 	{
 		if(Lobby.Current == null || Lobby.Current.Players == null || playerIndex < 0 || playerIndex >= Lobby.Current.Players.Count)
 			return CreateLocalPlayerFallback(playerIndex);
 
-		PlayerDescriptor descriptor = Lobby.Current.Players[playerIndex];
+		Lobby lobby = Lobby.Current;
+		PlayerDescriptor descriptor = lobby.Players[playerIndex];
+		bool ownedByLocal = lobby.IsOwnedByLocal(descriptor);
 		PlayerType playerType = descriptor.type;
 		switch(playerType)
 		{
 			case PlayerType.Local:
+				if(!ownedByLocal)
+					return CreateOnlinePlayer(playerIndex, OnlinePlayerRole.RemoteToLocal);
+
 				LocalPlayer local = gameObject.AddComponent<LocalPlayer>();
 				local.Initialize(this, playerIndex);
 				return local;
 			case PlayerType.Ai:
+				if(!ownedByLocal)
+				{
+					Debug.LogWarning($"AI slot {playerIndex} is not owned by this client, fallback to OnlinePlayer proxy.");
+					return CreateOnlinePlayer(playerIndex, OnlinePlayerRole.RemoteToLocal);
+				}
+
 				if(GameManager.Instance == null)
 				{
 					Debug.LogWarning($"GameManager is missing, fallback to LocalPlayer for AI slot {playerIndex}.");
@@ -308,8 +326,7 @@ public abstract class Match : MonoBehaviour
 
 				return aiConfig.CreatePlayer(this, playerIndex, Rule);
 			case PlayerType.Online:
-				Debug.LogWarning($"Online player runtime is not implemented yet, fallback to LocalPlayer at index {playerIndex}.");
-				return CreateLocalPlayerFallback(playerIndex);
+				return CreateOnlinePlayer(playerIndex, ownedByLocal ? OnlinePlayerRole.LocalToRemote : OnlinePlayerRole.RemoteToLocal);
 			default:
 				return CreateLocalPlayerFallback(playerIndex);
 		}
