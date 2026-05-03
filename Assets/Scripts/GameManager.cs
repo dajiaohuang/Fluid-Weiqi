@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public enum GameScene
 {
-	StartMenu, Lobby, Match
+	StartMenu, Lobby, BrowseLobby, Match
 }
 
 public class GameManager : MonoBehaviour
@@ -153,6 +153,7 @@ public class GameManager : MonoBehaviour
 
 	#region Lobby
 	public Lobby Lobby { get; private set; } = null;
+	public ILobbyBrowser LobbyBrowser { get; private set; } = new StubLobbyBrowser();
 
 	public void LoadDefaultLobby()
 	{
@@ -170,6 +171,11 @@ public class GameManager : MonoBehaviour
 		SwitchScene(GameScene.Lobby);
 	}
 
+	public void BrowseLobbies()
+	{
+		SwitchScene(GameScene.BrowseLobby);
+	}
+
 	public void ExitLobby()
 	{
 		SwitchScene(GameScene.StartMenu);
@@ -184,6 +190,7 @@ public class GameManager : MonoBehaviour
 		{
 			GameScene.StartMenu => "Start Menu",
 			GameScene.Lobby => "Lobby",
+			GameScene.BrowseLobby => "Browse Lobby",
 			GameScene.Match => "Match",
 			_ => throw new System.ArgumentOutOfRangeException()
 		};

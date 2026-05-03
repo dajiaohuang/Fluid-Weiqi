@@ -10,5 +10,10 @@ public class StartMenu : MonoBehaviour
 	public void OnQuitGameButtonClicked()
 	{
 		GameManager.Instance.QuitGame();
-	}	
+	}
+
+	public void OnBrowseLobbyButtonClicked()
+	{
+		GameManager.Instance.BrowseLobbies();
+	}
 }
