@@ -8,10 +8,7 @@ public class TraditionalMatch : Match
 		base.OnPlace(position);
 
 		if(LastPlacementSucceed)
-		{
 			passCount = 0;
-			StepPlayerIndex();
-		}
 	}
 
 	int passCount = 0;
@@ -26,11 +23,8 @@ public class TraditionalMatch : Match
 		if(passCount == PlayerCount)
 		{
 			EndMatch();
-			InputEnabled = false;
 			return;
 		}
-
-		StepPlayerIndex();
 	}
 	#endregion
 }

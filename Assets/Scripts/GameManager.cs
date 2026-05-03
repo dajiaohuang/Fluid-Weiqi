@@ -11,10 +11,14 @@ public class GameManager : MonoBehaviour
 {
 	public static GameManager Instance { get; private set; }
 
-	const string InternalGameSettingsResourcePath = "Internal Game Settings";
+	const string GameSettingsResourcePath = "Game Settings";
 	readonly Dictionary<string, MatchModeConfig> matchModeConfigById = new();
+	readonly Dictionary<string, AiConfig> aiConfigById = new();
 	readonly List<MatchModeConfig> legacyMatchModeConfigs = new();
+	readonly List<AiConfig> legacyAiConfigs = new();
 	public IReadOnlyList<MatchModeConfig> LegacyMatchModeConfigs => legacyMatchModeConfigs;
+	public IReadOnlyList<MatchModeConfig> LoadedMatchModeConfigs => legacyMatchModeConfigs;
+	public IReadOnlyList<AiConfig> LegacyAiConfigs => legacyAiConfigs;
 	public string DefaultMatchModeId { get; private set; }
 	public GameObject DefaultMatchSkinPrefab { get; private set; }
 
@@ -53,21 +57,22 @@ public class GameManager : MonoBehaviour
 	void InitializeMatchModeConfigs()
 	{
 		matchModeConfigById.Clear();
+		aiConfigById.Clear();
 		legacyMatchModeConfigs.Clear();
+		legacyAiConfigs.Clear();
 
-		InternalGameSettings settings = Resources.Load<InternalGameSettings>(InternalGameSettingsResourcePath);
+		GameSettings settings = Resources.Load<GameSettings>(GameSettingsResourcePath);
 		if(settings == null)
 		{
 			DefaultMatchModeId = null;
 			DefaultMatchSkinPrefab = null;
-			Debug.LogError($"Internal game settings not found in Resources at '{InternalGameSettingsResourcePath}'.");
 			return;
 		}
 
 		DefaultMatchModeId = settings.DefaultMatchModeId;
 		DefaultMatchSkinPrefab = settings.DefaultMatchSkinPrefab;
 		if(DefaultMatchSkinPrefab == null)
-			Debug.LogError("Default match skin prefab is not configured in InternalGameSettings.");
+			Debug.LogError("Default match skin prefab is not configured in GameSettings.");
 		for(int i = 0; i < settings.LegacyMatchModes.Count; ++i)
 		{
 			MatchModeConfig config = settings.LegacyMatchModes[i];
@@ -90,8 +95,29 @@ public class GameManager : MonoBehaviour
 			legacyMatchModeConfigs.Add(config);
 		}
 
+		for(int i = 0; i < settings.LegacyAis.Count; ++i)
+		{
+			AiConfig config = settings.LegacyAis[i];
+			if(config == null)
+				continue;
+
+			if(string.IsNullOrWhiteSpace(config.AiId))
+			{
+				Debug.LogError($"AI config '{config.name}' has empty ai id.");
+				continue;
+			}
+			if(aiConfigById.ContainsKey(config.AiId))
+			{
+				Debug.LogError($"Duplicated ai id '{config.AiId}'.");
+				continue;
+			}
+
+			aiConfigById.Add(config.AiId, config);
+			legacyAiConfigs.Add(config);
+		}
+
 		if(!string.IsNullOrWhiteSpace(DefaultMatchModeId) && !matchModeConfigById.ContainsKey(DefaultMatchModeId))
-			Debug.LogError($"Default match mode id '{DefaultMatchModeId}' is not found in InternalGameSettings list.");
+			Debug.LogError($"Default match mode id '{DefaultMatchModeId}' is not found in GameSettings list.");
 	}
 
 	public bool TryGetMatchModeConfig(string modeId, out MatchModeConfig config)
@@ -102,6 +128,27 @@ public class GameManager : MonoBehaviour
 			return false;
 		}
 		return matchModeConfigById.TryGetValue(modeId, out config);
+	}
+
+	public bool TryGetAiConfig(string aiId, out AiConfig config)
+	{
+		if(string.IsNullOrWhiteSpace(aiId))
+		{
+			config = null;
+			return false;
+		}
+		return aiConfigById.TryGetValue(aiId, out config);
+	}
+
+	public AiConfig FindFirstAiForMode(string modeId)
+	{
+		for(int i = 0; i < legacyAiConfigs.Count; ++i)
+		{
+			AiConfig config = legacyAiConfigs[i];
+			if(config != null && config.SupportsMode(modeId))
+				return config;
+		}
+		return null;
 	}
 	#endregion
 

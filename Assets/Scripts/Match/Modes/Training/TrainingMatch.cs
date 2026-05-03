@@ -14,7 +14,6 @@ public class TrainingMatch : Match
 
 	protected override void OnPass()
 	{
-		StepPlayerIndex();
 	}
 	#endregion
 }

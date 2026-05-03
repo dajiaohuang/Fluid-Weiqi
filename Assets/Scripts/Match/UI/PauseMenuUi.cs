@@ -24,5 +24,6 @@ public class PauseMenuUi : MonoBehaviour
 	public void EndMatch()
 	{
 		// TODO
+		HostLobby.Current?.EndMatch();
 	}
 }

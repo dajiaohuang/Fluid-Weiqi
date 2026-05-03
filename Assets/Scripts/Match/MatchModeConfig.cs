@@ -9,11 +9,13 @@ public abstract class MatchModeConfig : ScriptableObject
 	[SerializeField] string modeId;
 	[SerializeField] string displayName;
 	[SerializeField] bool isDlcMode;
+	[SerializeField] bool isTurnBased;
 	[SerializeField] List<GameObject> uiAssemblyPrefabs = new();
 
 	public string ModeId => modeId;
 	public string DisplayName => displayName;
 	public bool IsDlcMode => isDlcMode;
+	public bool IsTurnBased => isTurnBased;
 
 	public virtual bool ValidateRules(MatchRule rule, Lobby lobby, out string errorMessage)
 	{
@@ -62,6 +64,7 @@ public abstract class MatchModeConfig : ScriptableObject
 		Match controller = CreateMatchController(host);
 		if(controller == null)
 			throw new MissingReferenceException($"Match mode '{ModeId}' failed to create match controller.");
+		controller.Rule = context.Rule;
 		controller.PlayerInfos = context.PlayerInfos;
 
 		for(int i = 0; i < uiAssemblyPrefabs.Count; ++i)

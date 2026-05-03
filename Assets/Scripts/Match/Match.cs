@@ -21,41 +21,28 @@ public abstract class Match : MonoBehaviour
 	public static Match Current { get; private set; }
 	public static Match Get<T>() where T : Match
 		=> Current as T;
+	public MatchRule Rule { get; set; }
+
+	readonly List<MatchPlayer> players = new();
+	bool isEnded;
+	public bool IsEnded => isEnded;
 
 	#region Unity life cycle
 	protected void Awake()
 	{
 		Current = this;
-
-		input = gameObject.AddComponent<MatchInput>();
-
-		input.OnCursorEnter += OnCursorEnter;
-		input.OnCursorMove += OnCursorMove;
-		input.OnCursorExit += OnCursorExit;
-		input.OnPlace += OnPlace;
-		input.OnRemove += OnRemove;
-		input.OnPass += OnPass;
 	}
 
 	protected void Start()
 	{
+		InitializePlayers();
 		CurrentPlayerIndex = 0;
+		BeginCurrentPlayerTurn();
 	}
 
 	protected void OnDestroy()
 	{
-		if(input != null)
-		{
-			input.OnCursorEnter -= OnCursorEnter;
-			input.OnCursorMove -= OnCursorMove;
-			input.OnCursorExit -= OnCursorExit;
-			input.OnPlace -= OnPlace;
-			input.OnRemove -= OnRemove;
-			input.OnPass -= OnPass;
-
-			input = null;
-		}
-
+		players.Clear();
 	}
 	#endregion
 
@@ -78,17 +65,61 @@ public abstract class Match : MonoBehaviour
 
 	protected void EndMatch()
 	{
+		if(isEnded)
+			return;
+
+		isEnded = true;
+		CancelAllPlayers();
 		onEnd?.Invoke();
 	}
 	#endregion
 
 	#region Input
-	MatchInput input;
-	protected MatchInput Input => input;
 	public bool InputEnabled
 	{
-		get => Input.enabled;
-		set => Input.enabled = value;
+		get => !isEnded && players.Count > 0;
+		set
+		{
+			if(!value)
+			{
+				CancelAllPlayers();
+				return;
+			}
+
+			if(!isEnded)
+				BeginCurrentPlayerTurn();
+		}
+	}
+
+	public void ReceiveCursorEnter(Vector2 position)
+	{
+		OnCursorEnter(position);
+	}
+
+	public void ReceiveCursorMove(Vector2 position)
+	{
+		OnCursorMove(position);
+	}
+
+	public void ReceiveCursorExit()
+	{
+		OnCursorExit();
+	}
+
+	public bool ReceivePlace(Vector2 position)
+	{
+		OnPlace(position);
+		return LastPlacementSucceed;
+	}
+
+	public void ReceiveRemove(Vector2 position)
+	{
+		OnRemove(position);
+	}
+
+	public void ReceivePass()
+	{
+		OnPass();
 	}
 
 	protected virtual void OnCursorEnter(Vector2 position)
@@ -108,6 +139,8 @@ public abstract class Match : MonoBehaviour
 
 	protected virtual void OnPlace(Vector2 position)
 	{
+		LastPlacementSucceed = false;
+
 		Board board = Board.Current;
 		if(board == null)
 			return;
@@ -209,6 +242,107 @@ public abstract class Match : MonoBehaviour
 	protected void StepPlayerIndex()
 	{
 		CurrentPlayerIndex = (CurrentPlayerIndex + 1) % PlayerCount;
+	}
+
+	void InitializePlayers()
+	{
+		players.Clear();
+
+		for(int i = 0; i < PlayerCount; ++i)
+		{
+			MatchPlayer player = CreateRuntimePlayer(i);
+			if(player == null)
+				throw new MissingReferenceException($"Failed to create player runtime for index {i}.");
+
+			int playerIndex = i;
+			player.OnMadeMove += () => OnPlayerMadeMove(playerIndex);
+			players.Add(player);
+		}
+	}
+
+	LocalPlayer CreateLocalPlayerFallback(int playerIndex)
+	{
+		LocalPlayer fallback = gameObject.AddComponent<LocalPlayer>();
+		fallback.Initialize(this, playerIndex);
+		return fallback;
+	}
+
+	MatchPlayer CreateRuntimePlayer(int playerIndex)
+	{
+		if(Lobby.Current == null || Lobby.Current.Players == null || playerIndex < 0 || playerIndex >= Lobby.Current.Players.Count)
+			return CreateLocalPlayerFallback(playerIndex);
+
+		PlayerDescriptor descriptor = Lobby.Current.Players[playerIndex];
+		PlayerType playerType = descriptor.type;
+		switch(playerType)
+		{
+			case PlayerType.Local:
+				LocalPlayer local = gameObject.AddComponent<LocalPlayer>();
+				local.Initialize(this, playerIndex);
+				return local;
+			case PlayerType.Ai:
+				if(GameManager.Instance == null)
+				{
+					Debug.LogWarning($"GameManager is missing, fallback to LocalPlayer for AI slot {playerIndex}.");
+					return CreateLocalPlayerFallback(playerIndex);
+				}
+
+				AiConfig aiConfig = null;
+				if(!string.IsNullOrWhiteSpace(descriptor.aiId))
+					GameManager.Instance.TryGetAiConfig(descriptor.aiId, out aiConfig);
+
+				if(aiConfig == null)
+					aiConfig = GameManager.Instance.FindFirstAiForMode(Rule.modeId);
+
+				if(aiConfig == null)
+				{
+					Debug.LogWarning($"No AI config available for mode '{Rule.modeId}', fallback to LocalPlayer at index {playerIndex}.");
+					return CreateLocalPlayerFallback(playerIndex);
+				}
+
+				if(!aiConfig.SupportsMode(Rule.modeId))
+				{
+					Debug.LogWarning($"AI '{aiConfig.AiName}' ({aiConfig.AiId}) does not support mode '{Rule.modeId}', fallback to LocalPlayer at index {playerIndex}.");
+					return CreateLocalPlayerFallback(playerIndex);
+				}
+
+				return aiConfig.CreatePlayer(this, playerIndex, Rule);
+			case PlayerType.Online:
+				Debug.LogWarning($"Online player runtime is not implemented yet, fallback to LocalPlayer at index {playerIndex}.");
+				return CreateLocalPlayerFallback(playerIndex);
+			default:
+				return CreateLocalPlayerFallback(playerIndex);
+		}
+	}
+
+	void OnPlayerMadeMove(int playerIndex)
+	{
+		if(isEnded)
+			return;
+		if(playerIndex != CurrentPlayerIndex)
+			return;
+
+		StepPlayerIndex();
+		BeginCurrentPlayerTurn();
+	}
+
+	void BeginCurrentPlayerTurn()
+	{
+		if(isEnded || players.Count == 0)
+			return;
+
+		CancelAllPlayers();
+
+		int safeIndex = Mathf.Clamp(CurrentPlayerIndex, 0, players.Count - 1);
+		BoardState state = Board.Current?.State;
+		BoardState snapshot = state != null ? new BoardState(state) : null;
+		players[safeIndex].RequestMove(snapshot);
+	}
+
+	void CancelAllPlayers()
+	{
+		for(int i = 0; i < players.Count; ++i)
+			players[i]?.CancelMove();
 	}
 
 	int CountCapturedStones(BoardState oldState, BoardState newState, int placedPlayer)

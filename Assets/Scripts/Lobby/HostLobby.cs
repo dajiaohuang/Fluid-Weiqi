@@ -19,8 +19,9 @@ public class HostLobby : Lobby
 		};
 		yield return new()
 		{
-			type = PlayerType.Local,
+			type = PlayerType.Ai,
 			isHost = false,
+			aiId = LaoSongAiConfig.Id,
 
 			color = Color.white,
 		};
@@ -61,6 +62,11 @@ public class HostLobby : Lobby
 		// TODO
 		OnDismissed?.Invoke();
 	}
+
+	public void EndMatch()
+	{
+		OnMatchEnded?.Invoke();
+	}
 	#endregion
 
 	#region Lobby settings
@@ -89,7 +95,23 @@ public class HostLobby : Lobby
 			Debug.LogWarning($"Cannot set player #{i}'s type to {type.ToLocalizedString()} because the lobby is offline.");
 			return;
 		}
-		players[i].type = type;
+
+		PlayerDescriptor player = players[i];
+		player.type = type;
+		if(type == PlayerType.Ai)
+		{
+			if(string.IsNullOrWhiteSpace(player.aiId) && GameManager.Instance != null)
+			{
+				AiConfig defaultAi = GameManager.Instance.FindFirstAiForMode(matchRule.modeId);
+				player.aiId = defaultAi != null ? defaultAi.AiId : null;
+			}
+		}
+		else
+		{
+			player.aiId = null;
+		}
+
+		players[i] = player;
 		OnPlayersChanged?.Invoke();
 	}
 

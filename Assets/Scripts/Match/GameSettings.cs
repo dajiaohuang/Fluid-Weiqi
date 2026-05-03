@@ -1,14 +1,16 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[CreateAssetMenu(fileName = "InternalGameSettings", menuName = "FluidWeiqi/Internal Game Settings")]
-public class InternalGameSettings : ScriptableObject
+[CreateAssetMenu(fileName = "GameSettings", menuName = "FluidWeiqi/Game Settings")]
+public class GameSettings : ScriptableObject
 {
 	[SerializeField] string defaultMatchModeId;
 	[SerializeField] GameObject defaultMatchSkinPrefab;
 	[SerializeField] List<MatchModeConfig> legacyMatchModes = new();
+	[SerializeField] List<AiConfig> legacyAis = new();
 
 	public string DefaultMatchModeId => defaultMatchModeId;
 	public GameObject DefaultMatchSkinPrefab => defaultMatchSkinPrefab;
 	public IReadOnlyList<MatchModeConfig> LegacyMatchModes => legacyMatchModes;
+	public IReadOnlyList<AiConfig> LegacyAis => legacyAis;
 }

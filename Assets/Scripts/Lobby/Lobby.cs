@@ -26,6 +26,7 @@ public class PlayerDescriptor
 	public PlayerType type;
 	public bool isHost;
 	public PlayerLocator locator;
+	public string aiId;
 
 	public int Index => Lobby.Current?.Players.IndexOf(this) ?? -1;
 
@@ -35,10 +36,23 @@ public class PlayerDescriptor
 		return type switch
 		{
 			PlayerType.Local => $"本地玩家 {Index}",
-			PlayerType.Ai => $"AI 玩家 {Index}",  // TODO
+			PlayerType.Ai => GetAiDisplayName(),
 			PlayerType.Online => $"网络玩家 {Index}",  // TODO
 			_ => null,
 		};
+	}
+
+	string GetAiDisplayName()
+	{
+		if(GameManager.Instance != null
+			&& !string.IsNullOrWhiteSpace(aiId)
+			&& GameManager.Instance.TryGetAiConfig(aiId, out AiConfig config)
+			&& !string.IsNullOrWhiteSpace(config.AiName))
+		{
+			return config.AiName;
+		}
+
+		return $"AI 玩家 {Index}";
 	}
 }
 
@@ -60,6 +74,7 @@ public abstract class Lobby
 
 	public Action OnDismissed;
 	public Action OnStartingMatch;
+	public Action OnMatchEnded;
 	#endregion
 
 	#region Lobby settings
@@ -121,6 +136,31 @@ public abstract class Lobby
 
 		if(!modeConfig.ValidateRules(MatchRule, this, out errorMessage))
 			return false;
+
+		for(int i = 0; i < Players.Count; ++i)
+		{
+			PlayerDescriptor player = Players[i];
+			if(player == null || player.type != PlayerType.Ai)
+				continue;
+
+			if(string.IsNullOrWhiteSpace(player.aiId))
+			{
+				errorMessage = $"AI 玩家 #{i} 未配置 aiId。";
+				return false;
+			}
+
+			if(!GameManager.Instance.TryGetAiConfig(player.aiId, out AiConfig aiConfig))
+			{
+				errorMessage = $"未找到 AI 配置: {player.aiId}";
+				return false;
+			}
+
+			if(!aiConfig.SupportsMode(MatchRule.modeId))
+			{
+				errorMessage = $"AI '{aiConfig.AiName}' 不支持模式 '{MatchRule.modeId}'。";
+				return false;
+			}
+		}
 
 		return true;
 	}
