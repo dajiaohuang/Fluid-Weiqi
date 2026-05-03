@@ -1,0 +1,159 @@
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+
+public class LaoWangAiPlayer : AiPlayer
+{
+	const float MinDistanceEpsilon = 0.0001f;
+
+	LaoWangAiConfig laoWangConfig;
+	bool cancelled;
+	readonly BoardUtility.BoardCaches evaluationCaches = new();
+
+	public void Initialize(Match match, int playerIndex, MatchRule rule, LaoWangAiConfig config)
+	{
+		base.Initialize(match, playerIndex, rule, config);
+		laoWangConfig = config;
+	}
+
+	public override void RequestMove(BoardState state)
+	{
+		cancelled = false;
+		if(state == null || Match.IsEnded)
+			return;
+
+		StartCoroutine(EvaluateAndMove(state));
+	}
+
+	public override void CancelMove()
+	{
+		cancelled = true;
+		StopAllCoroutines();
+	}
+
+	void OnDestroy()
+	{
+		BoardUtility.Dispose(evaluationCaches);
+	}
+
+	IEnumerator EvaluateAndMove(BoardState state)
+	{
+		int sampleCount = laoWangConfig != null ? laoWangConfig.SampleCount : 12;
+		float evaluationDelay = laoWangConfig != null ? laoWangConfig.PerCandidateEvaluationDelay : 0f;
+
+		Vector2 bestCandidate = default;
+		float bestLoss = float.PositiveInfinity;
+		bool hasCandidate = false;
+
+		for(int i = 0; i < sampleCount; ++i)
+		{
+			if(cancelled || Match.IsEnded)
+				yield break;
+
+			if(evaluationDelay > 0f)
+				yield return new WaitForSeconds(evaluationDelay);
+
+			Vector2 point = SampleBoardPoint(state);
+			if(!IsLegalPlacement(state, point))
+				continue;
+
+			float loss = EvaluateLoss(state, point);
+			if(!hasCandidate || loss < bestLoss)
+			{
+				hasCandidate = true;
+				bestLoss = loss;
+				bestCandidate = point;
+			}
+		}
+
+		if(cancelled || Match.IsEnded)
+			yield break;
+
+		if(hasCandidate && Match.ReceivePlace(bestCandidate))
+		{
+			NotifyMadeMove();
+			yield break;
+		}
+
+		Match.ReceivePass();
+		NotifyMadeMove();
+	}
+
+	Vector2 SampleBoardPoint(BoardState state)
+	{
+		int boardSize = Mathf.Max(1, Mathf.RoundToInt(state.Size));
+		int x = Random.Range(0, boardSize);
+		int y = Random.Range(0, boardSize);
+		return new Vector2(x, y);
+	}
+
+	bool IsLegalPlacement(BoardState state, Vector2 point)
+	{
+		if(point.x < 0 || point.x >= state.Size || point.y < 0 || point.y >= state.Size)
+			return false;
+
+		if(!evaluationCaches.isInitialized)
+			BoardUtility.Initialize(evaluationCaches);
+
+		Color[] playerColors = BuildPlayerColors(state.PlayerCount);
+		BoardUtility.RenderAnalysis(evaluationCaches, state, playerColors);
+		return BoardUtility.TryPlaceStoneStandard(evaluationCaches, state, PlayerIndex, point, out _);
+	}
+
+	float EvaluateLoss(BoardState state, Vector2 point)
+	{
+		float distance = ComputeNearestDistanceToOwnStoneOrEdge(state, point);
+		float idealDistance = ComputeIdealDistance(state);
+
+		float safeDistance = Mathf.Max(MinDistanceEpsilon, distance);
+		float safeIdeal = Mathf.Max(MinDistanceEpsilon, idealDistance);
+		float delta = Mathf.Log(safeDistance) - Mathf.Log(safeIdeal);
+		return Mathf.Exp(delta * delta);
+	}
+
+	float ComputeIdealDistance(BoardState state)
+	{
+		float boardSize = Mathf.Max(1f, state.Size);
+		int turnNumber = Match.GetCurrentTurnNumber();
+		if(turnNumber <= laoWangConfig.startingTurnCount)
+			return Mathf.Min(laoWangConfig.startingIdealDistance, boardSize * 0.5f);
+
+		float initial = laoWangConfig != null ? laoWangConfig.InitialIdealDistance : 3f;
+		float end = laoWangConfig != null ? laoWangConfig.FinalIdealDistance : 0.75f;
+		float decayRate = laoWangConfig != null ? laoWangConfig.IdealDistanceDecayRate : 0.2f;
+		float t = Mathf.Max(0, turnNumber - 2);
+		return end + (initial - end) * Mathf.Exp(-decayRate * t);
+	}
+
+	float ComputeNearestDistanceToOwnStoneOrEdge(BoardState state, Vector2 point)
+	{
+		float boardExtent = Mathf.Max(0f, state.Size - 1f);
+		float edgeDistance = Mathf.Min(
+			Mathf.Min(point.x, boardExtent - point.x),
+			Mathf.Min(point.y, boardExtent - point.y));
+
+		float nearestOwnStoneDistance = float.PositiveInfinity;
+		IReadOnlyList<StonePlacement> ownStones = state.GetStones(PlayerIndex);
+		for(int i = 0; i < ownStones.Count; ++i)
+		{
+			float dist = Vector2.Distance(point, ownStones[i].position);
+			if(dist < nearestOwnStoneDistance)
+				nearestOwnStoneDistance = dist;
+		}
+
+		return Mathf.Min(edgeDistance, nearestOwnStoneDistance);
+	}
+
+	Color[] BuildPlayerColors(int playerCount)
+	{
+		Color[] colors = new Color[Mathf.Max(0, playerCount)];
+		IReadOnlyList<PlayerInfo> infos = Match.PlayerInfos;
+		if(infos == null)
+			return colors;
+
+		int length = Mathf.Min(colors.Length, infos.Count);
+		for(int i = 0; i < length; ++i)
+			colors[i] = infos[i].color;
+		return colors;
+	}
+}

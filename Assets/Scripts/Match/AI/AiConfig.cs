@@ -5,7 +5,6 @@ public abstract class AiConfig : ScriptableObject
 {
 	[SerializeField] string aiId;
 	[SerializeField] string aiName;
-	[SerializeField] List<string> supportedModes = new();
 
 	public virtual string AiId => aiId;
 	public virtual string AiName => aiName;
@@ -13,7 +12,7 @@ public abstract class AiConfig : ScriptableObject
 	// Override this when a specific AI prefers hard-coded supported mode ids.
 	public virtual IEnumerable<string> EnumerateSupportedModeIds()
 	{
-		return supportedModes;
+		yield break;
 	}
 
 	public virtual bool SupportsMode(string modeId)

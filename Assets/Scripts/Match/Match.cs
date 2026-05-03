@@ -244,6 +244,13 @@ public abstract class Match : MonoBehaviour
 		}
 	}
 
+	protected int TurnSequence => turnSeq;
+
+	public virtual int GetCurrentTurnNumber()
+	{
+		return -1;
+	}
+
 	protected Action<int> onCurrentPlayerChanged;
 	public event Action<int> OnCurrentPlayerChanged
 	{
@@ -388,6 +395,9 @@ public abstract class Match : MonoBehaviour
 		SetPlayerPassState(CurrentPlayerIndex, false);
 
 		int safeIndex = Mathf.Clamp(CurrentPlayerIndex, 0, players.Count - 1);
+		if(!(players[safeIndex] is LocalPlayer))
+			Board.Current?.ClearPreview();
+
 		BoardState state = Board.Current?.State;
 		BoardState snapshot = state != null ? new BoardState(state) : null;
 		players[safeIndex].RequestMove(snapshot);
