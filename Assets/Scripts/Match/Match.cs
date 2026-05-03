@@ -239,6 +239,18 @@ public abstract class Match : MonoBehaviour
 		remove => onCurrentPlayerChanged -= value;
 	}
 
+	protected Action<int, bool> onPlayerPassStateChanged;
+	public event Action<int, bool> OnPlayerPassStateChanged
+	{
+		add => onPlayerPassStateChanged += value;
+		remove => onPlayerPassStateChanged -= value;
+	}
+
+	protected void SetPlayerPassState(int playerIndex, bool passed)
+	{
+		onPlayerPassStateChanged?.Invoke(playerIndex, passed);
+	}
+
 	protected void StepPlayerIndex()
 	{
 		CurrentPlayerIndex = (CurrentPlayerIndex + 1) % PlayerCount;
@@ -349,6 +361,7 @@ public abstract class Match : MonoBehaviour
 			return;
 
 		CancelAllPlayers();
+		SetPlayerPassState(CurrentPlayerIndex, false);
 
 		int safeIndex = Mathf.Clamp(CurrentPlayerIndex, 0, players.Count - 1);
 		BoardState state = Board.Current?.State;

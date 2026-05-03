@@ -19,6 +19,7 @@ public class TraditionalMatch : Match
 		if(AudioManager.Instance != null)
 			AudioManager.Instance.PlaySkipSound();
 
+		SetPlayerPassState(CurrentPlayerIndex, true);
 		++passCount;
 		if(passCount == PlayerCount)
 		{

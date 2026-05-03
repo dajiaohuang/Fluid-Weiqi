@@ -128,6 +128,21 @@ public class HostLobby : Lobby
 		OnPlayersChanged?.Invoke();
 	}
 
+	public void SetPlayerAi(int i, string aiId)
+	{
+		if(!players.IsValidIndex(i))
+		{
+			Debug.LogWarning($"Failed to set player #{i}'s AI to '{aiId}'.");
+			return;
+		}
+		PlayerDescriptor player = players[i];
+		if(player.type != PlayerType.Ai)
+			return;
+		player.aiId = aiId;
+		players[i] = player;
+		OnPlayersChanged?.Invoke();
+	}
+
 	public void RemovePlayer(int i)
 	{
 		if(!players.IsValidIndex(i))
