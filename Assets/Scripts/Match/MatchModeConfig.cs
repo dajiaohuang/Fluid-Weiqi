@@ -8,13 +8,12 @@ public abstract class MatchModeConfig : ScriptableObject
 
 	[SerializeField] string modeId;
 	[SerializeField] string displayName;
-	[SerializeField] bool isDlcMode;
 	[SerializeField] bool isTurnBased;
 	[SerializeField] List<GameObject> uiAssemblyPrefabs = new();
 
 	public string ModeId => modeId;
 	public string DisplayName => displayName;
-	public bool IsDlcMode => isDlcMode;
+	public bool IsLegacyMode => GameSettings.Instance.LegacyMatchModes.Contains(this);
 	public bool IsTurnBased => isTurnBased;
 
 	public virtual bool ValidateRules(MatchRule rule, Lobby lobby, out string errorMessage)

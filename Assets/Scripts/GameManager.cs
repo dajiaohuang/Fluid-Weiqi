@@ -11,7 +11,6 @@ public class GameManager : MonoBehaviour
 {
 	public static GameManager Instance { get; private set; }
 
-	const string GameSettingsResourcePath = "Game Settings";
 	readonly Dictionary<string, MatchModeConfig> matchModeConfigById = new();
 	readonly Dictionary<string, AiConfig> aiConfigById = new();
 	readonly List<MatchModeConfig> legacyMatchModeConfigs = new();
@@ -61,7 +60,7 @@ public class GameManager : MonoBehaviour
 		legacyMatchModeConfigs.Clear();
 		legacyAiConfigs.Clear();
 
-		GameSettings settings = Resources.Load<GameSettings>(GameSettingsResourcePath);
+		GameSettings settings = GameSettings.Instance;
 		if(settings == null)
 		{
 			DefaultMatchModeId = null;

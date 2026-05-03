@@ -128,7 +128,7 @@ public abstract class Lobby
 			return false;
 		}
 
-		if(IsOnline && modeConfig.IsDlcMode)
+		if(IsOnline && !modeConfig.IsLegacyMode)
 		{
 			errorMessage = "联机模式暂不支持 DLC 对局模式。";
 			return false;
