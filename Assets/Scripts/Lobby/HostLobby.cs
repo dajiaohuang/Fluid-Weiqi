@@ -27,10 +27,9 @@ public class HostLobby : Lobby
 		};
 		yield return new()
 		{
-			type = PlayerType.Ai,
+			type = PlayerType.Local,
 			isHost = false,
 			locator = HostPlayerLocator,
-			aiId = LaoSongAiConfig.Id,
 			colorIndex = 1,
 		};
 	}

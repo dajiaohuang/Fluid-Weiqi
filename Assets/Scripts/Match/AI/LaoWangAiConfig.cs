@@ -4,9 +4,6 @@ using System.Collections.Generic;
 [CreateAssetMenu(fileName = "LaoWangAiConfig", menuName = "FluidWeiqi/AI/Lao Wang")]
 public class LaoWangAiConfig : AiConfig<LaoWangAiConfig>
 {
-	public const string Id = "lao-wang";
-	const string LaoWangName = "牢王";
-
 	[SerializeField] int sampleCount = 12;
 	[SerializeField] public float startingIdealDistance = 3f;
 	[SerializeField] public int startingTurnCount = 4;
@@ -20,9 +17,6 @@ public class LaoWangAiConfig : AiConfig<LaoWangAiConfig>
 	public float FinalIdealDistance => Mathf.Max(0.01f, finalIdealDistance);
 	public float IdealDistanceDecayRate => Mathf.Max(0.001f, idealDistanceDecayRate);
 	public float PerCandidateEvaluationDelay => Mathf.Max(0f, perCandidateEvaluationDelay);
-
-	public override string AiId => Id;
-	public override string AiName => LaoWangName;
 
 	public override IEnumerable<string> EnumerateSupportedModeIds()
 	{

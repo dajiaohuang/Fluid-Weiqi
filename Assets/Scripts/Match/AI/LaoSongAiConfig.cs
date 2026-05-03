@@ -4,16 +4,10 @@ using System.Collections.Generic;
 [CreateAssetMenu(fileName = "LaoSongAiConfig", menuName = "FluidWeiqi/AI/Lao Song")]
 public class LaoSongAiConfig : AiConfig<LaoSongAiConfig>
 {
-	public const string Id = "lao-song";
-	const string LaoSongName = "牢宋";
-
 	[SerializeField] int maxRollCount = 3;
 	[SerializeField] float turnBasedModeDelay = 0.5f;
 	public int MaxRollCount => Mathf.Max(1, maxRollCount);
 	public float TurnBasedModeDelay => Mathf.Max(0f, turnBasedModeDelay);
-
-	public override string AiId => Id;
-	public override string AiName => LaoSongName;
 
 	public override IEnumerable<string> EnumerateSupportedModeIds()
 	{

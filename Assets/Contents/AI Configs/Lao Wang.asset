@@ -17,7 +17,7 @@ MonoBehaviour:
   sampleCount: 12
   startingIdealDistance: 3
   startingTurnCount: 4
-  initialIdealDistance: 10
-  finalIdealDistance: 2
+  initialIdealDistance: 5
+  finalIdealDistance: 1.5
   idealDistanceDecayRate: 0.1
   perCandidateEvaluationDelay: 0.1
