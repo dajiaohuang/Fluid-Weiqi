@@ -11,6 +11,7 @@ public class ClientLobby : Lobby
 	LobbyVisibility visibility;
 	MatchRule matchRule;
 	string invitationCode;
+	bool isMatchInProgress;
 
 	public override LobbyLocator Locator => locator;
 	public override LobbyVisibility Visibility => visibility;
@@ -34,7 +35,15 @@ public class ClientLobby : Lobby
 		if(Locator.IsValid && snapshot.lobbyLocator.IsValid && Locator.id != snapshot.lobbyLocator.id)
 			return;
 
+		bool wasInMatch = isMatchInProgress;
+		isMatchInProgress = snapshot.isMatchInProgress;
+
 		ApplySnapshot(snapshot.visibility, snapshot.matchRule, NetworkSnapshotUtility.ToPlayerDescriptors(snapshot.players), snapshot.invitationCode);
+
+		if(!wasInMatch && isMatchInProgress)
+			NotifyMatchStarting();
+		else if(wasInMatch && !isMatchInProgress)
+			NotifyMatchEnded();
 	}
 
 	public override string GetInvitationCode() =>

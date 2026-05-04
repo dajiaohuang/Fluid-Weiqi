@@ -35,4 +35,6 @@ public class StubLobbyService : ILobbyService
 			sb.Append(chars[rng.Next(chars.Length)]);
 		onResult?.Invoke(sb.ToString());
 	}
+
+	public void LeaveLobby(LobbyLocator lobbyLocator) { /* no-op in stub */ }
 }

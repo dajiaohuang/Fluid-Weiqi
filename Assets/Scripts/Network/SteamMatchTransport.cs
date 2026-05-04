@@ -44,7 +44,8 @@ public class SteamMatchTransport : IMatchTransport
 	// Internal state
 	// -------------------------------------------------------------------------
 
-	Callback<SteamNetworkingMessagesSessionFailed_t> cbSessionFailed;
+	Callback<SteamNetworkingMessagesSessionFailed_t>  cbSessionFailed;
+	Callback<SteamNetworkingMessagesSessionRequest_t> cbSessionRequest;
 	MatchTransportRunner runner;
 
 	// -------------------------------------------------------------------------
@@ -220,7 +221,8 @@ public class SteamMatchTransport : IMatchTransport
 
 	void Attach()
 	{
-		cbSessionFailed = Callback<SteamNetworkingMessagesSessionFailed_t>.Create(OnSessionFailed);
+		cbSessionFailed  = Callback<SteamNetworkingMessagesSessionFailed_t>.Create(OnSessionFailed);
+		cbSessionRequest = Callback<SteamNetworkingMessagesSessionRequest_t>.Create(OnSessionRequest);
 
 		// Create a hidden MonoBehaviour to drive Poll() each frame
 		var go = new GameObject("[SteamMatchTransportRunner]") { hideFlags = HideFlags.HideAndDontSave };
@@ -233,6 +235,8 @@ public class SteamMatchTransport : IMatchTransport
 	{
 		cbSessionFailed?.Dispose();
 		cbSessionFailed = null;
+		cbSessionRequest?.Dispose();
+		cbSessionRequest = null;
 
 		if(runner != null)
 		{
@@ -245,6 +249,12 @@ public class SteamMatchTransport : IMatchTransport
 	{
 		Debug.LogWarning($"[SteamMatchTransport] Session failed with {data.m_info.m_identityRemote.GetSteamID()}");
 		SetConnectionState(NetworkConnectionState.Degraded);
+	}
+
+	void OnSessionRequest(SteamNetworkingMessagesSessionRequest_t data)
+	{
+		// Auto-accept every incoming P2P session so messages can flow in both directions.
+		SteamNetworkingMessages.AcceptSessionWithUser(ref data.m_identityRemote);
 	}
 
 	// -------------------------------------------------------------------------

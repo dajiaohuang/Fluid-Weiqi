@@ -12,7 +12,9 @@ public class InMemoryLobbySyncTransport : ILobbySyncTransport
 	static readonly Dictionary<string, LobbyRoom> roomById = new();
 
 	public event Action<LobbySyncSnapshot> OnSnapshotReceived;
+	public event Action<PlayerLocator> OnClientConnected;
 	public event Action<PlayerLocator> OnClientDisconnected;
+	public event Action OnLobbyClosed;
 
 	public bool IsHost { get; private set; }
 	public LobbyLocator LobbyLocator { get; private set; }
@@ -44,6 +46,7 @@ public class InMemoryLobbySyncTransport : ILobbySyncTransport
 
 		LobbyRoom room = GetOrCreateRoom(lobbyLocator.id);
 		room.clients.Add(this);
+		room.host?.OnClientConnected?.Invoke(localPlayerLocator);
 	}
 
 	public void BroadcastSnapshot(LobbySyncSnapshot snapshot)
@@ -73,7 +76,13 @@ public class InMemoryLobbySyncTransport : ILobbySyncTransport
 			return;
 
 		if(room.host == this)
+		{
+			InMemoryLobbySyncTransport[] clients = new InMemoryLobbySyncTransport[room.clients.Count];
+			room.clients.CopyTo(clients);
+			foreach(InMemoryLobbySyncTransport client in clients)
+				client.OnLobbyClosed?.Invoke();
 			room.host = null;
+		}
 		room.clients.Remove(this);
 	}
 

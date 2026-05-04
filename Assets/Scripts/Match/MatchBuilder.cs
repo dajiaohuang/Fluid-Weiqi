@@ -49,7 +49,9 @@ public class MatchBuilder : MonoBehaviour
 		if(Lobby.Current == null)
 		{
 			Debug.LogWarning("No lobby present, building default match.");
-			GameManager.Instance.LoadDefaultLobby();
+			GameManager.Instance.CreateLobby();
+			Destroy(this);
+			return;
 		}
 
 		if(!Lobby.Current.ValidateStartingCondition(out string errorMessage))

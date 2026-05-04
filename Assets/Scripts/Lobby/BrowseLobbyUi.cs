@@ -43,18 +43,6 @@ public class BrowseLobbyUi : MonoBehaviour
 
 		Refresh();
 	}
-
-	protected void OnDestroy()
-	{
-		refreshButton.onClick.RemoveListener(OnRefreshClicked);
-		prevPageButton.onClick.RemoveListener(OnPrevPageClicked);
-		nextPageButton.onClick.RemoveListener(OnNextPageClicked);
-		searchInput.onEndEdit.RemoveListener(OnSearchEndEdit);
-		if(joinByCodeButton != null)
-			joinByCodeButton.onClick.RemoveListener(OnJoinByCodeClicked);
-		if(backButton != null)
-			backButton.onClick.RemoveListener(OnBackButtonClicked);
-	}
 	#endregion
 
 	#region Controls

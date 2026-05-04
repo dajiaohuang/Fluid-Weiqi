@@ -81,6 +81,7 @@ public sealed class LobbySyncSnapshot
 {
 	public LobbyLocator lobbyLocator;
 	public int version;
+	public bool isMatchInProgress;
 	public LobbyVisibility visibility;
 	public MatchRule matchRule;
 	public string invitationCode;
@@ -147,6 +148,7 @@ public static class NetworkSnapshotUtility
 		{
 			lobbyLocator = lobby.Locator,
 			version = version,
+			isMatchInProgress = lobby is HostLobby hostLobby && hostLobby.IsMatchInProgress,
 			visibility = lobby.Visibility,
 			matchRule = lobby.MatchRule,
 			invitationCode = lobby.GetInvitationCode(),

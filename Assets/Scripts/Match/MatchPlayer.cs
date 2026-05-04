@@ -7,6 +7,7 @@ public abstract class MatchPlayer : MonoBehaviour
 	public int PlayerIndex { get; private set; }
 
 	public abstract bool IsAlive { get; }
+	public virtual bool CanReceiveLocalInput => false;
 	public event Action OnMadeMove;
 
 	public virtual void Initialize(Match match, int playerIndex)

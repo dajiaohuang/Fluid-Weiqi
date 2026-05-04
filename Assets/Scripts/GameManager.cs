@@ -208,6 +208,8 @@ public class GameManager : MonoBehaviour
 		LobbySyncTransport?.ConfigureAsHost(hostLobby.Locator, hostLobby.LocalPlayerLocator);
 		if(LobbySyncTransport != null)
 		{
+			LobbySyncTransport.OnClientConnected -= hostLobby.NotifyClientConnected;
+			LobbySyncTransport.OnClientConnected += hostLobby.NotifyClientConnected;
 			LobbySyncTransport.OnClientDisconnected -= hostLobby.NotifyClientDisconnected;
 			LobbySyncTransport.OnClientDisconnected += hostLobby.NotifyClientDisconnected;
 		}
@@ -224,16 +226,30 @@ public class GameManager : MonoBehaviour
 		{
 			LobbySyncTransport.OnSnapshotReceived -= clientLobby.ApplySnapshot;
 			LobbySyncTransport.OnSnapshotReceived += clientLobby.ApplySnapshot;
+			LobbySyncTransport.OnLobbyClosed -= clientLobby.NotifyLobbyDismissed;
+			LobbySyncTransport.OnLobbyClosed += clientLobby.NotifyLobbyDismissed;
 		}
 	}
 
 	public void LoadDefaultLobby()
 	{
+		LoadDefaultLobby(null);
+	}
+
+	void LoadDefaultLobby(System.Action<HostLobby> onLoaded)
+	{
 		LobbyService.CreateLobby(LobbyVisibility.Local, 4, locator =>
 		{
+			if(!locator.IsValid)
+			{
+				Debug.LogError("Failed to create lobby: received invalid lobby locator.");
+				return;
+			}
+
 			HostLobby hostLobby = new HostLobby(DefaultMatchModeId, locator);
 			Lobby = hostLobby;
 			ConfigureHostTransports(hostLobby);
+			onLoaded?.Invoke(hostLobby);
 		});
 	}
 
@@ -246,8 +262,7 @@ public class GameManager : MonoBehaviour
 
 	public void CreateLobby()
 	{
-		LoadDefaultLobby();
-		SwitchScene(GameScene.Lobby);
+		LoadDefaultLobby(_ => SwitchScene(GameScene.Lobby));
 	}
 
 	public void BrowseLobbies()
@@ -261,9 +276,16 @@ public class GameManager : MonoBehaviour
 			LobbySyncTransport?.NotifyClientDisconnected(Lobby.LocalPlayerLocator);
 
 		if(LobbySyncTransport != null && Lobby is ClientLobby clientLobby)
+		{
 			LobbySyncTransport.OnSnapshotReceived -= clientLobby.ApplySnapshot;
+			LobbySyncTransport.OnLobbyClosed -= clientLobby.NotifyLobbyDismissed;
+		}
 		if(LobbySyncTransport != null && Lobby is HostLobby hostLobby)
 			LobbySyncTransport.OnClientDisconnected -= hostLobby.NotifyClientDisconnected;
+
+		// Leave the Steam lobby so the host receives LobbyChatUpdate_t immediately.
+		if(Lobby != null)
+			LobbyService?.LeaveLobby(Lobby.Locator);
 
 		SwitchScene(GameScene.StartMenu);
 		Lobby = null;

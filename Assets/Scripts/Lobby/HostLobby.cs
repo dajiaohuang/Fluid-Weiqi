@@ -8,7 +8,9 @@ public class HostLobby : Lobby
 	public new static HostLobby Current => Lobby.Current as HostLobby;
 	public static readonly PlayerLocator HostPlayerLocator = new("host");
 	readonly LobbyLocator locator;
+	readonly PlayerLocator localPlayerLocator;
 	int lobbyVersion = 0;
+	bool isMatchInProgress = false;
 
 	#region Creation
 	static PlayerLocator MakeRemotePlayerLocator(int i)
@@ -16,31 +18,49 @@ public class HostLobby : Lobby
 		return new PlayerLocator($"remote-{i}");
 	}
 
-	static IEnumerable<PlayerDescriptor> MakeDefaultPlayerList()
+	static IEnumerable<PlayerDescriptor> MakeDefaultPlayerList(PlayerLocator hostLocalLocator)
 	{
 		yield return new()
 		{
 			type = PlayerType.Local,
 			isHost = true,
-			locator = HostPlayerLocator,
+			locator = hostLocalLocator,
 			colorIndex = 0,
 		};
 		yield return new()
 		{
 			type = PlayerType.Local,
 			isHost = false,
-			locator = HostPlayerLocator,
+			locator = hostLocalLocator,
 			colorIndex = 1,
 		};
 	}
 
-	static PlayerDescriptor MakeNewPlayer(int i)
+	static PlayerLocator ResolveHostLocalPlayerLocator()
+	{
+#if !DISABLESTEAMWORKS
+		if(SteamManager.Initialized)
+			return new PlayerLocator(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString());
+#endif
+		return HostPlayerLocator;
+	}
+
+	static bool IsVacantOnlineSlot(PlayerDescriptor player)
+	{
+		if(player == null || player.type != PlayerType.Online)
+			return false;
+		if(!player.locator.IsValid)
+			return true;
+		return player.locator.id != null && player.locator.id.StartsWith("remote-", StringComparison.Ordinal);
+	}
+
+	PlayerDescriptor MakeNewPlayer(int i)
 	{
 		return new()
 		{
 			type = PlayerType.Local,
 			isHost = false,
-			locator = HostPlayerLocator,
+			locator = localPlayerLocator,
 			colorIndex = (i + 2) % 4,
 		};
 	}
@@ -48,7 +68,8 @@ public class HostLobby : Lobby
 	public HostLobby(string defaultMatchModeId, LobbyLocator locator)
 	{
 		this.locator = locator;
-		players.AddRange(MakeDefaultPlayerList());
+		localPlayerLocator = ResolveHostLocalPlayerLocator();
+		players.AddRange(MakeDefaultPlayerList(localPlayerLocator));
 		matchRule = new MatchRule
 		{
 			modeId = defaultMatchModeId,
@@ -61,19 +82,54 @@ public class HostLobby : Lobby
 	#region Status
 	public void StartMatch()
 	{
-		// TODO
+		isMatchInProgress = true;
+		PublishLobbySnapshot();
 		OnStartingMatch?.Invoke();
 	}
 
 	public void Dismiss()
 	{
-		// TODO
+		GameManager.Instance?.ExitLobby();
 		OnDismissed?.Invoke();
 	}
 
 	public void EndMatch()
 	{
+		isMatchInProgress = false;
+		PublishLobbySnapshot();
 		OnMatchEnded?.Invoke();
+	}
+
+	public bool IsMatchInProgress => isMatchInProgress;
+
+	public void NotifyClientConnected(PlayerLocator locator)
+	{
+		if(!locator.IsValid)
+			return;
+
+		for(int i = 0; i < players.Count; ++i)
+		{
+			PlayerDescriptor player = players[i];
+			if(player == null || player.type != PlayerType.Online)
+				continue;
+			if(player.locator == locator)
+				return;
+		}
+
+		for(int i = players.Count - 1; i >= 0; --i)
+		{
+			PlayerDescriptor player = players[i];
+			if(!IsVacantOnlineSlot(player))
+				continue;
+
+			player.locator = locator;
+			players[i] = player;
+			OnPlayersChanged?.Invoke();
+			PublishLobbySnapshot();
+			return;
+		}
+
+		Debug.LogWarning($"No vacant online slot available for connected client '{locator}'.");
 	}
 
 	public void NotifyClientDisconnected(PlayerLocator locator)
@@ -81,7 +137,30 @@ public class HostLobby : Lobby
 		if(!locator.IsValid)
 			return;
 
+		bool changed = false;
+		for(int i = 0; i < players.Count; ++i)
+		{
+			PlayerDescriptor player = players[i];
+			if(player == null || player.type != PlayerType.Online)
+				continue;
+			if(player.locator != locator)
+				continue;
+
+			player.locator = MakeRemotePlayerLocator(i);
+			players[i] = player;
+			changed = true;
+		}
+
+		if(!changed)
+			return;
+
 		Debug.LogWarning($"Client '{locator}' disconnected from host lobby.");
+		OnPlayersChanged?.Invoke();
+		if(isMatchInProgress)
+		{
+			EndMatch();
+			return;
+		}
 		PublishLobbySnapshot();
 	}
 	#endregion
@@ -124,7 +203,7 @@ public class HostLobby : Lobby
 	#region Players
 	readonly List<PlayerDescriptor> players = new();
 	public override List<PlayerDescriptor> Players => players;
-	public override PlayerLocator LocalPlayerLocator => HostPlayerLocator;
+	public override PlayerLocator LocalPlayerLocator => localPlayerLocator;
 
 	public void SetPlayerType(int i, PlayerType type)
 	{
@@ -143,7 +222,7 @@ public class HostLobby : Lobby
 		player.type = type;
 		player.locator = type == PlayerType.Online
 			? MakeRemotePlayerLocator(i)
-			: HostPlayerLocator;
+			: localPlayerLocator;
 		if(type == PlayerType.Ai)
 		{
 			if(string.IsNullOrWhiteSpace(player.aiId) && GameManager.Instance != null)

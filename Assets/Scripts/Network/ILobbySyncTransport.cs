@@ -3,7 +3,9 @@ using System;
 public interface ILobbySyncTransport
 {
 	event Action<LobbySyncSnapshot> OnSnapshotReceived;
+	event Action<PlayerLocator> OnClientConnected;
 	event Action<PlayerLocator> OnClientDisconnected;
+	event Action OnLobbyClosed;
 
 	bool IsHost { get; }
 	LobbyLocator LobbyLocator { get; }

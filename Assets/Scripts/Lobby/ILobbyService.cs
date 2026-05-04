@@ -24,4 +24,6 @@ public interface ILobbyService
 	// The service (e.g. Steam) generates/registers the code on the backend
 	// and returns it via callback. The stub generates one locally.
 	void RequestInvitationCode(LobbyLocator lobbyLocator, Action<string> onResult);
+
+	void LeaveLobby(LobbyLocator lobbyLocator);
 }

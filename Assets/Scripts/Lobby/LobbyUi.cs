@@ -12,10 +12,17 @@ public class LobbyUi : MonoBehaviour
 		// Debug
 		if(Lobby.Current == null)
 		{
+			Debug.LogWarning("Creating debug lobby.");
 			GameManager.Instance.CreateLobby();
 			return;
 		}
 #endif
+
+		if(Lobby.Current == null)
+		{
+			Debug.LogError("No lobby present.");
+			return;
+		}
 
 		Lobby.Current.OnDismissed += OnLobbyDismissed;
 		Lobby.Current.OnStartingMatch += OnStartingMatch;
@@ -41,6 +48,7 @@ public class LobbyUi : MonoBehaviour
 		RefreshMatchRuleArea();
 
 		// Footer
+		startButton.gameObject.SetActive(Lobby.Current.IsHost);
 		startButton.interactable = Lobby.Current.IsHost;
 		RefreshFooterArea();
 	}
@@ -158,6 +166,7 @@ public class LobbyUi : MonoBehaviour
 	void OnPlayersChanged()
 	{
 		ReconstructPlayerSlots();
+		RefreshFooterArea();
 	}
 
 	void ReconstructPlayerSlots()
@@ -235,6 +244,7 @@ public class LobbyUi : MonoBehaviour
 	void OnMatchRuleChanged()
 	{
 		RefreshMatchRuleArea();
+		RefreshFooterArea();
 	}
 
 	void RefreshMatchRuleArea()
@@ -254,6 +264,12 @@ public class LobbyUi : MonoBehaviour
 
 	void RefreshFooterArea()
 	{
+		if(!Lobby.Current.IsHost)
+		{
+			errorText.gameObject.SetActive(false);
+			return;
+		}
+
 		bool valid = Lobby.Current.ValidateStartingCondition(out string errorMessage);
 		startButton.interactable = valid;
 		errorText.gameObject.SetActive(!valid);

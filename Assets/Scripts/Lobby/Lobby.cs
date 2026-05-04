@@ -77,13 +77,35 @@ public class PlayerDescriptor
 	public Color color => GameSettings.Instance?.GetPlayerColor(colorIndex) ?? Color.white;
 	public string GetLocalizedName()
 	{
+		string steamName = TryGetSteamPersonaName(locator);
+
 		return type switch
 		{
-			PlayerType.Local => $"本地玩家 {Index}",
+			PlayerType.Local => !string.IsNullOrWhiteSpace(steamName) ? steamName : $"本地玩家 {Index}",
 			PlayerType.Ai => GetAiDisplayName(),
-			PlayerType.Online => $"网络玩家 {Index}",  // TODO
+			PlayerType.Online => !string.IsNullOrWhiteSpace(steamName) ? steamName : $"网络玩家 {Index}",
 			_ => null,
 		};
+	}
+
+	static string TryGetSteamPersonaName(PlayerLocator playerLocator)
+	{
+		if(!playerLocator.IsValid)
+			return null;
+
+#if !DISABLESTEAMWORKS
+		if(!SteamManager.Initialized)
+			return null;
+		if(!ulong.TryParse(playerLocator.id, out ulong rawId))
+			return null;
+
+		string name = Steamworks.SteamFriends.GetFriendPersonaName(new Steamworks.CSteamID(rawId));
+		if(string.IsNullOrWhiteSpace(name))
+			return null;
+		return name;
+#else
+		return null;
+#endif
 	}
 
 	string GetAiDisplayName()

@@ -395,7 +395,7 @@ public abstract class Match : MonoBehaviour
 		SetPlayerPassState(CurrentPlayerIndex, false);
 
 		int safeIndex = Mathf.Clamp(CurrentPlayerIndex, 0, players.Count - 1);
-		if(!(players[safeIndex] is LocalPlayer))
+		if(!players[safeIndex].CanReceiveLocalInput)
 			Board.Current?.ClearPreview();
 
 		BoardState state = Board.Current?.State;

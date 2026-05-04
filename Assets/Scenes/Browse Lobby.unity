@@ -1768,14 +1768,14 @@ PrefabInstance:
     - target: {fileID: 8902065449534726438, guid: 1285f00964d2f4c44a872c44bfcd460b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1355877271364460697}
     - target: {fileID: 8902065449534726438, guid: 1285f00964d2f4c44a872c44bfcd460b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: LeaveLobby
+      value: OnBackButtonClicked
       objectReference: {fileID: 0}
     - target: {fileID: 8902065449534726438, guid: 1285f00964d2f4c44a872c44bfcd460b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: Lobby, Assembly-CSharp
+      value: BrowseLobbyUi, Assembly-CSharp
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 6734650923972431752, guid: 1285f00964d2f4c44a872c44bfcd460b, type: 3}

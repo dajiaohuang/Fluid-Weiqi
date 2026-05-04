@@ -16,13 +16,19 @@ using Steamworks;
 public class SteamLobbySyncTransport : ILobbySyncTransport
 {
 	const string SnapshotKey = "snapshot";
+	const string KeyCode = "code";
+	const string KeyPlaying = "playing";
+	const string KeyOpenSlots = "open_online_slots";
+	const string KeyPlayers = "players";
 
 	// -------------------------------------------------------------------------
 	// ILobbySyncTransport
 	// -------------------------------------------------------------------------
 
 	public event Action<LobbySyncSnapshot> OnSnapshotReceived;
+	public event Action<PlayerLocator> OnClientConnected;
 	public event Action<PlayerLocator> OnClientDisconnected;
+	public event Action OnLobbyClosed;
 
 	public bool IsHost { get; private set; }
 	public LobbyLocator LobbyLocator { get; private set; }
@@ -34,6 +40,7 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 
 	Callback<LobbyDataUpdate_t>  cbLobbyDataUpdate;
 	Callback<LobbyChatUpdate_t>  cbLobbyChatUpdate;
+	ulong remoteHostSteamId;
 
 	// -------------------------------------------------------------------------
 	// Configure
@@ -45,6 +52,7 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 		IsHost = true;
 		LobbyLocator = lobbyLocator;
 		LocalPlayerLocator = hostLocator;
+		remoteHostSteamId = 0;
 		RegisterCallbacks();
 	}
 
@@ -54,6 +62,7 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 		IsHost = false;
 		LobbyLocator = lobbyLocator;
 		LocalPlayerLocator = localPlayerLocator;
+		remoteHostSteamId = ResolveLobbyOwnerSteamId(lobbyLocator);
 		RegisterCallbacks();
 	}
 
@@ -69,8 +78,27 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 		if(!ulong.TryParse(LobbyLocator.id, out ulong rawId))
 			return;
 
+		CSteamID steamLobbyId = new CSteamID(rawId);
+
+		// Always keep the lobby publicly listed on Steam so RequestLobbyList can
+		// find it.  Privacy is enforced by the "code" metadata key:
+		//   Public  → code = ""         (visible in public search)
+		//   Private → code = <invite>   (hidden from public search, found by code)
+		SteamMatchmaking.SetLobbyType(steamLobbyId, ELobbyType.k_ELobbyTypePublic);
+
+		string codeValue = snapshot.visibility == LobbyVisibility.Private
+			? (snapshot.invitationCode ?? "")
+			: "";
+		SteamMatchmaking.SetLobbyData(steamLobbyId, KeyCode, codeValue);
+
+		int openOnlineSlots = CountOpenOnlineSlots(snapshot);
+		int playerCount = snapshot.players != null ? snapshot.players.Count : 0;
+		SteamMatchmaking.SetLobbyData(steamLobbyId, KeyPlaying, snapshot.isMatchInProgress ? "1" : "0");
+		SteamMatchmaking.SetLobbyData(steamLobbyId, KeyOpenSlots, openOnlineSlots.ToString());
+		SteamMatchmaking.SetLobbyData(steamLobbyId, KeyPlayers, playerCount.ToString());
+
 		string json = NetworkSerializer.SerializeLobbySnapshot(snapshot);
-		SteamMatchmaking.SetLobbyData(new CSteamID(rawId), SnapshotKey, json);
+		SteamMatchmaking.SetLobbyData(steamLobbyId, SnapshotKey, json);
 	}
 
 	// -------------------------------------------------------------------------
@@ -126,14 +154,27 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 
 	void OnLobbyChatUpdate(LobbyChatUpdate_t data)
 	{
-		if(!IsHost)
-			return;
 		if(!LobbyLocator.IsValid)
 			return;
 		if(!ulong.TryParse(LobbyLocator.id, out ulong rawId))
 			return;
 		if(data.m_ulSteamIDLobby != rawId)
 			return;
+
+		const uint enteredFlags =
+			(uint)EChatMemberStateChange.k_EChatMemberStateChangeEntered;
+
+		if((data.m_rgfChatMemberStateChange & enteredFlags) != 0)
+		{
+			if(!IsHost)
+				return;
+			if(data.m_ulSteamIDUserChanged == SteamUser.GetSteamID().m_SteamID)
+				return;
+
+			var locator = new PlayerLocator(data.m_ulSteamIDUserChanged.ToString());
+			OnClientConnected?.Invoke(locator);
+			return;
+		}
 
 		// Fire for any state that means the member has left
 		const uint leftFlags =
@@ -144,9 +185,46 @@ public class SteamLobbySyncTransport : ILobbySyncTransport
 
 		if((data.m_rgfChatMemberStateChange & leftFlags) != 0)
 		{
+			if(!IsHost && remoteHostSteamId != 0 && data.m_ulSteamIDUserChanged == remoteHostSteamId)
+			{
+				OnLobbyClosed?.Invoke();
+				return;
+			}
+			if(!IsHost)
+				return;
+
 			var locator = new PlayerLocator(data.m_ulSteamIDUserChanged.ToString());
 			OnClientDisconnected?.Invoke(locator);
 		}
+	}
+
+	static ulong ResolveLobbyOwnerSteamId(LobbyLocator lobbyLocator)
+	{
+		if(!lobbyLocator.IsValid)
+			return 0;
+		if(!ulong.TryParse(lobbyLocator.id, out ulong rawId))
+			return 0;
+
+		return SteamMatchmaking.GetLobbyOwner(new CSteamID(rawId)).m_SteamID;
+	}
+
+	static int CountOpenOnlineSlots(LobbySyncSnapshot snapshot)
+	{
+		if(snapshot?.players == null)
+			return 0;
+
+		int open = 0;
+		for(int i = 0; i < snapshot.players.Count; ++i)
+		{
+			LobbyPlayerSnapshot player = snapshot.players[i];
+			if(player == null || player.type != PlayerType.Online)
+				continue;
+
+			if(!player.locator.IsValid || (player.locator.id != null && player.locator.id.StartsWith("remote-", StringComparison.Ordinal)))
+				open += 1;
+		}
+
+		return open;
 	}
 }
 #endif

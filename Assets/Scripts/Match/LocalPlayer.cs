@@ -6,6 +6,7 @@ public class LocalPlayer : MatchPlayer
 	bool receivingMove;
 
 	public override bool IsAlive => true;
+	public override bool CanReceiveLocalInput => true;
 
 	public override void Initialize(Match match, int playerIndex)
 	{

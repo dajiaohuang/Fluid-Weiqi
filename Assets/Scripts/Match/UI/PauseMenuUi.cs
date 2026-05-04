@@ -6,24 +6,73 @@ public class PauseMenuUi : MonoBehaviour
 
 	protected void Awake()
 	{
-		pauseMenu.SetActive(false);
+		if(pauseMenu != null)
+			pauseMenu.SetActive(false);
+
+		if(Lobby.Current != null)
+		{
+			Lobby.Current.OnMatchEnded += OnLobbyMatchEnded;
+			Lobby.Current.OnDismissed += OnLobbyDismissed;
+		}
+	}
+
+	protected void OnDestroy()
+	{
+		if(Lobby.Current != null)
+		{
+			Lobby.Current.OnMatchEnded -= OnLobbyMatchEnded;
+			Lobby.Current.OnDismissed -= OnLobbyDismissed;
+		}
 	}
 
 	public void OpenPauseMenu()
 	{
-		pauseMenu.SetActive(true);
-		Match.Current.InputEnabled = false;
+		if(pauseMenu != null)
+			pauseMenu.SetActive(true);
+		if(Match.Current != null)
+			Match.Current.InputEnabled = false;
 	}
 
 	public void ClosePauseMenu()
 	{
-		pauseMenu.SetActive(false);
-		Match.Current.InputEnabled = true;
+		if(pauseMenu != null)
+			pauseMenu.SetActive(false);
+		if(Match.Current != null)
+			Match.Current.InputEnabled = true;
 	}
 
 	public void EndMatch()
 	{
-		// TODO
-		HostLobby.Current?.EndMatch();
+		ClosePauseMenu();
+
+		if(Lobby.Current == null || !Lobby.Current.IsOnline)
+		{
+			GameManager.Instance?.SwitchScene(GameScene.StartMenu);
+			return;
+		}
+
+		if(Lobby.Current.IsHost)
+		{
+			HostLobby.Current?.EndMatch();
+			return;
+		}
+
+		GameManager.Instance?.ExitLobby();
+	}
+
+	void OnLobbyMatchEnded()
+	{
+		if(GameManager.Instance == null)
+			return;
+		ClosePauseMenu();
+		GameManager.Instance.SwitchScene(GameScene.Lobby);
+	}
+
+	void OnLobbyDismissed()
+	{
+		if(GameManager.Instance == null)
+			return;
+		ClosePauseMenu();
+		GameManager.Instance.SwitchScene(GameScene.StartMenu);
 	}
 }
