@@ -8,8 +8,17 @@ public enum LobbyVisibility
 	Local, Private, Public
 }
 
+[System.Serializable]
 public struct LobbyLocator
 {
+	public string id;
+
+	public LobbyLocator(string id)
+	{
+		this.id = id;
+	}
+
+	public bool IsValid => !string.IsNullOrWhiteSpace(id);
 }
 
 public enum PlayerType
@@ -17,8 +26,42 @@ public enum PlayerType
 	Local, Ai, Online
 }
 
+[System.Serializable]
 public struct PlayerLocator
 {
+	public string id;
+
+	public PlayerLocator(string id)
+	{
+		this.id = id;
+	}
+
+	public bool IsValid => !string.IsNullOrWhiteSpace(id);
+
+	public override string ToString()
+	{
+		return id ?? string.Empty;
+	}
+
+	public override bool Equals(object obj)
+	{
+		return obj is PlayerLocator other && string.Equals(id, other.id, StringComparison.Ordinal);
+	}
+
+	public override int GetHashCode()
+	{
+		return id != null ? StringComparer.Ordinal.GetHashCode(id) : 0;
+	}
+
+	public static bool operator ==(PlayerLocator left, PlayerLocator right)
+	{
+		return left.Equals(right);
+	}
+
+	public static bool operator !=(PlayerLocator left, PlayerLocator right)
+	{
+		return !left.Equals(right);
+	}
 }
 
 public class PlayerDescriptor
@@ -26,19 +69,56 @@ public class PlayerDescriptor
 	public PlayerType type;
 	public bool isHost;
 	public PlayerLocator locator;
+	public string aiId;
+	public int colorIndex;
 
 	public int Index => Lobby.Current?.Players.IndexOf(this) ?? -1;
 
-	public Color color;
+	public Color color => GameSettings.Instance?.GetPlayerColor(colorIndex) ?? Color.white;
 	public string GetLocalizedName()
 	{
+		string steamName = TryGetSteamPersonaName(locator);
+
 		return type switch
 		{
-			PlayerType.Local => $"本地玩家 {Index}",
-			PlayerType.Ai => $"AI 玩家 {Index}",  // TODO
-			PlayerType.Online => $"网络玩家 {Index}",  // TODO
+			PlayerType.Local => !string.IsNullOrWhiteSpace(steamName) ? steamName : $"本地玩家 {Index}",
+			PlayerType.Ai => GetAiDisplayName(),
+			PlayerType.Online => !string.IsNullOrWhiteSpace(steamName) ? steamName : $"网络玩家 {Index}",
 			_ => null,
 		};
+	}
+
+	static string TryGetSteamPersonaName(PlayerLocator playerLocator)
+	{
+		if(!playerLocator.IsValid)
+			return null;
+
+#if !DISABLESTEAMWORKS
+		if(!SteamManager.Initialized)
+			return null;
+		if(!ulong.TryParse(playerLocator.id, out ulong rawId))
+			return null;
+
+		string name = Steamworks.SteamFriends.GetFriendPersonaName(new Steamworks.CSteamID(rawId));
+		if(string.IsNullOrWhiteSpace(name))
+			return null;
+		return name;
+#else
+		return null;
+#endif
+	}
+
+	string GetAiDisplayName()
+	{
+		if(GameManager.Instance != null
+			&& !string.IsNullOrWhiteSpace(aiId)
+			&& GameManager.Instance.TryGetAiConfig(aiId, out AiConfig config)
+			&& !string.IsNullOrWhiteSpace(config.AiName))
+		{
+			return config.AiName;
+		}
+
+		return $"AI 玩家 {Index}";
 	}
 }
 
@@ -54,139 +134,116 @@ public abstract class Lobby
 		}
 	}
 
-	#region Online status
+	#region Status
 	public bool IsHost => this is HostLobby;
 	public bool IsOnline => Visibility != LobbyVisibility.Local;
+
+	public Action OnDismissed;
+	public Action OnStartingMatch;
+	public Action OnMatchEnded;
 	#endregion
 
 	#region Lobby settings
+	public abstract LobbyLocator Locator { get; }
 	public abstract LobbyVisibility Visibility { get; }
 	public Action OnVisibilityChanged;
+
+	public virtual string GetInvitationCode() => null;
 	#endregion
 
 	#region Players
 	public abstract List<PlayerDescriptor> Players { get; }
+	public abstract PlayerLocator LocalPlayerLocator { get; }
 	public PlayerDescriptor HostPlayer => Players.FirstOrDefault(p => p.isHost);
-	public IEnumerable<PlayerDescriptor> UniqueOnlinePlayers => Players.Where(p => p.type == PlayerType.Online).Distinct();
+	public IEnumerable<PlayerDescriptor> UniqueOnlinePlayers => Players
+		.Where(p => p != null && p.type == PlayerType.Online)
+		.GroupBy(p => p.locator)
+		.Select(g => g.First());
 	public Action OnPlayersChanged;
+
+	public bool IsOwnedByLocal(PlayerDescriptor descriptor)
+	{
+		if(descriptor == null)
+			return false;
+
+		if(LocalPlayerLocator.IsValid && descriptor.locator.IsValid)
+			return descriptor.locator == LocalPlayerLocator;
+
+		// Backward compatibility while locator data is still being wired.
+		if(IsHost)
+			return descriptor.type != PlayerType.Online;
+
+		return false;
+	}
 	#endregion
 
 	#region Match rules
 	public abstract MatchRule MatchRule { get; }
 	public Action OnMatchRuleChanged;
-	#endregion
-}
 
-public class HostLobby : Lobby
-{
-	public new static HostLobby Current => Lobby.Current as HostLobby;
-
-	#region Creation
-	static IEnumerable<PlayerDescriptor> MakeDefaultPlayerList()
+	public bool ValidateStartingCondition(out string errorMessage)
 	{
-		yield return new()
+		errorMessage = null;
+
+		if(Players == null || Players.Count < 2)
 		{
-			type = PlayerType.Local,
-			isHost = true,
-
-			color = Color.black,
-		};
-		yield return new()
-		{
-			type = PlayerType.Local,
-			isHost = false,
-
-			color = Color.white,
-		};
-	}
-
-	static PlayerDescriptor MakeNewPlayer(int i)
-	{
-		return new()
-		{
-			type = PlayerType.Local,
-			isHost = false,
-
-			color = new Color[] { Color.red, Color.green, Color.blue, Color.yellow }[i],
-		};
-	}
-
-	public HostLobby()
-	{
-		players.AddRange(MakeDefaultPlayerList());
-	}
-	#endregion
-
-	#region Lobby settings
-	LobbyVisibility visibility = LobbyVisibility.Local;
-	public override LobbyVisibility Visibility => visibility;
-	public void SetVisibility(LobbyVisibility value)
-	{
-		visibility = value;
-		OnVisibilityChanged?.Invoke();
-	}
-	#endregion
-
-	#region Players
-	readonly List<PlayerDescriptor> players = new();
-	public override List<PlayerDescriptor> Players => players;
-
-	public void SetPlayerType(int i, PlayerType type)
-	{
-		if(!players.IsValidIndex(i))
-		{
-			Debug.LogWarning($"Failed to set player #{i}'s type to {type.ToLocalizedString()}.");
-			return;
+			errorMessage = "至少需要 2 名玩家才能开始对局。";
+			return false;
 		}
-		if(!IsOnline && type == PlayerType.Online)
-		{
-			Debug.LogWarning($"Cannot set player #{i}'s type to {type.ToLocalizedString()} because the lobby is offline.");
-			return;
-		}
-		players[i].type = type;
-		OnPlayersChanged?.Invoke();
-	}
 
-	public void RemovePlayer(int i)
-	{
-		if(!players.IsValidIndex(i))
+		if(GameManager.Instance == null)
 		{
-			Debug.LogWarning($"Failed to remove player #{i} because there are only {players.Count} players.");
-			return;
+			errorMessage = "GameManager 未初始化。";
+			return false;
 		}
-		if(players.Count <= 2)
-		{
-			Debug.LogWarning($"Cannot remove player #{i} because a match must have at least 2 players. Current player count = {players.Count}.");
-			return;
-		}
-		players.RemoveAt(i);
-		OnPlayersChanged?.Invoke();
-	}
 
-	public void AddPlayer()
-	{
-		if(players.Count >= 4)
+		if(string.IsNullOrWhiteSpace(MatchRule.modeId))
 		{
-			Debug.LogWarning($"Cannot add new player because a match can have at most 4 players. Current player count = {players.Count}.");
-			return;
+			errorMessage = "未设置对局模式。";
+			return false;
 		}
-		players.Add(MakeNewPlayer(players.Count));
-		OnPlayersChanged?.Invoke();
-	}
-	#endregion
 
-	#region Match rules
-	MatchRule matchRule = new()
-	{
-		mode = MatchMode.Traditional,
-		boardSize = 19,
-		stoneHardness = 1f,
-	};
-	public override MatchRule MatchRule => matchRule;
-	public void SetMatchRule(MatchRule value)
-	{
-		matchRule = value;
-		OnMatchRuleChanged?.Invoke();
+		if(!GameManager.Instance.TryGetMatchModeConfig(MatchRule.modeId, out MatchModeConfig modeConfig))
+		{
+			errorMessage = $"未找到对局模式配置: {MatchRule.modeId}";
+			return false;
+		}
+
+		if(IsOnline && !modeConfig.IsLegacyMode)
+		{
+			errorMessage = "联机模式暂不支持 DLC 对局模式。";
+			return false;
+		}
+
+		if(!modeConfig.ValidateRules(MatchRule, this, out errorMessage))
+			return false;
+
+		for(int i = 0; i < Players.Count; ++i)
+		{
+			PlayerDescriptor player = Players[i];
+			if(player == null || player.type != PlayerType.Ai)
+				continue;
+
+			if(string.IsNullOrWhiteSpace(player.aiId))
+			{
+				errorMessage = $"AI 玩家 #{i} 未配置 aiId。";
+				return false;
+			}
+
+			if(!GameManager.Instance.TryGetAiConfig(player.aiId, out AiConfig aiConfig))
+			{
+				errorMessage = $"未找到 AI 配置: {player.aiId}";
+				return false;
+			}
+
+			if(!aiConfig.SupportsMode(MatchRule.modeId))
+			{
+				errorMessage = $"AI '{aiConfig.AiName}' 不支持模式 '{MatchRule.modeId}'。";
+				return false;
+			}
+		}
+
+		return true;
 	}
 	#endregion
 }

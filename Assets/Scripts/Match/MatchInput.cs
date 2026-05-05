@@ -50,39 +50,39 @@ public class MatchInput : MonoBehaviour
 			return;
 		}
 
-		Vector2 logicalPosition = Board.Current.WorldToLogicalPosition(hit.point);
+		Vector2 absolutePosition = Board.Current.WorldToAbsolutePosition(hit.point);
 		bool freePlace = shiftDown ^ capslocked;
 		if(!freePlace)
 		{
-			float maxCoord = Board.Current.State.Size - 1;
-			logicalPosition = new Vector2(
-				Mathf.Clamp(Mathf.Round(logicalPosition.x), 0, maxCoord),
-				Mathf.Clamp(Mathf.Round(logicalPosition.y), 0, maxCoord)
+			float maxCoord = Board.Current.State.BoardStateExtent;
+			absolutePosition = new Vector2(
+				Mathf.Clamp(Mathf.Round(absolutePosition.x), 0, maxCoord),
+				Mathf.Clamp(Mathf.Round(absolutePosition.y), 0, maxCoord)
 			);
 		}
 
 		if(!hasCursorPosition)
 		{
 			hasCursorPosition = true;
-			lastCursorPosition = logicalPosition;
-			OnCursorEnter?.Invoke(logicalPosition);
-			OnCursorMove?.Invoke(logicalPosition);
+			lastCursorPosition = absolutePosition;
+			OnCursorEnter?.Invoke(absolutePosition);
+			OnCursorMove?.Invoke(absolutePosition);
 		}
-		else if((logicalPosition - lastCursorPosition).sqrMagnitude > PreviewPositionEpsilon)
+		else if((absolutePosition - lastCursorPosition).sqrMagnitude > PreviewPositionEpsilon)
 		{
-			lastCursorPosition = logicalPosition;
-			OnCursorMove?.Invoke(logicalPosition);
+			lastCursorPosition = absolutePosition;
+			OnCursorMove?.Invoke(absolutePosition);
 		}
 
 		if(Input.GetMouseButtonDown(0))
 		{
-			OnPlace?.Invoke(logicalPosition);
-			OnCursorMove?.Invoke(logicalPosition);
+			OnPlace?.Invoke(absolutePosition);
+			OnCursorMove?.Invoke(absolutePosition);
 		}
 		if(Input.GetMouseButtonDown(1))
 		{
-			OnRemove?.Invoke(logicalPosition);
-			OnCursorMove?.Invoke(logicalPosition);
+			OnRemove?.Invoke(absolutePosition);
+			OnCursorMove?.Invoke(absolutePosition);
 		}
 	}
 

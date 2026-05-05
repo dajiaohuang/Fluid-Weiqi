@@ -31,4 +31,14 @@ public class PlayerStatusRow : MonoBehaviour
 		get => currentTurnIndicator.activeSelf;
 		set => currentTurnIndicator.SetActive(value);
 	}
+
+	[SerializeField] Graphic passedIndicator;
+	public bool IsPassed
+	{
+		set
+		{
+			if(passedIndicator != null)
+				passedIndicator.enabled = value;
+		}
+	}
 }

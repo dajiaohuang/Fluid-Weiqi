@@ -2,16 +2,10 @@ using UnityEngine;
 
 public class TraditionalMatch : Match
 {
-	#region UI
-	TraditionalGameUi ui;
-
-	protected override GameObject MakeUi()
+	public override int GetCurrentTurnNumber()
 	{
-		var go = Instantiate(Resources.Load<GameObject>("Prefabs/Traditional Match UI"), transform);
-		ui = go.GetComponent<TraditionalGameUi>();
-		return go;
+		return TurnSequence / Mathf.Max(1, PlayerCount) + 1;
 	}
-	#endregion
 
 	#region Input
 	protected override void OnPlace(Vector2 position)
@@ -19,10 +13,7 @@ public class TraditionalMatch : Match
 		base.OnPlace(position);
 
 		if(LastPlacementSucceed)
-		{
 			passCount = 0;
-			StepPlayerIndex();
-		}
 	}
 
 	int passCount = 0;
@@ -33,16 +24,13 @@ public class TraditionalMatch : Match
 		if(AudioManager.Instance != null)
 			AudioManager.Instance.PlaySkipSound();
 
+		SetPlayerPassState(CurrentPlayerIndex, true);
 		++passCount;
 		if(passCount == PlayerCount)
 		{
-			ui.ShowEnding();
-			InputEnabled = false;
+			EndMatch();
 			return;
 		}
-		// TODO: Show pass UI
-
-		StepPlayerIndex();
 	}
 	#endregion
 }

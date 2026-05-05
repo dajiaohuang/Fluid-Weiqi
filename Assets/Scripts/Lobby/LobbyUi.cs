@@ -6,27 +6,31 @@ using System.Linq;
 public class LobbyUi : MonoBehaviour
 {
 	#region Unity life cycle
-	protected void Awake()
-	{
-		playerSlotPrefab = Resources.Load<GameObject>("Prefabs/Player Slot");
-	}
-
 	protected void Start()
 	{
 #if DEBUG && UNITY_EDITOR
 		// Debug
 		if(Lobby.Current == null)
 		{
+			Debug.LogWarning("Creating debug lobby.");
 			GameManager.Instance.CreateLobby();
 			return;
 		}
 #endif
 
+		if(Lobby.Current == null)
+		{
+			Debug.LogError("No lobby present.");
+			return;
+		}
+
+		Lobby.Current.OnDismissed += OnLobbyDismissed;
+		Lobby.Current.OnStartingMatch += OnStartingMatch;
+
 		// Lobby settings
 		SetVisibilityOptions(allVisibilityOptions);
 		visibilityDropdown.interactable = Lobby.Current.IsHost;
 		visibilityDropdown.onValueChanged.AddListener(OnVisibilityDropdownValueChanged);
-		lobbyNameInput.interactable = Lobby.Current.IsHost;
 		Lobby.Current.OnVisibilityChanged += OnVisibilityChanged;
 		RefreshLobbySettingsUi();
 
@@ -35,7 +39,7 @@ public class LobbyUi : MonoBehaviour
 		ReconstructPlayerSlots();
 
 		// Match rule
-		SetMatchModeOptions(allMatchModes);
+		SetMatchModeOptions(GameManager.Instance != null ? GameManager.Instance.LegacyMatchModeConfigs : new List<MatchModeConfig>());
 		matchModeDropdown.onValueChanged.AddListener(OnMatchModeDropdownValueChanged);
 		boardSizeSlider.onValueChanged.AddListener(OnBoardSizeSliderValueChanged);
 		stoneHardnessSlider.onValueChanged.AddListener(OnStoneHardnessSliderValueChanged);
@@ -43,6 +47,7 @@ public class LobbyUi : MonoBehaviour
 		RefreshMatchRuleArea();
 
 		// Footer
+		startButton.gameObject.SetActive(Lobby.Current.IsHost);
 		startButton.interactable = Lobby.Current.IsHost;
 		RefreshFooterArea();
 	}
@@ -51,6 +56,8 @@ public class LobbyUi : MonoBehaviour
 	{
 		if(Lobby.Current != null)
 		{
+			Lobby.Current.OnDismissed -= OnLobbyDismissed;
+			Lobby.Current.OnStartingMatch -= OnStartingMatch;
 			Lobby.Current.OnVisibilityChanged -= OnVisibilityChanged;
 			Lobby.Current.OnPlayersChanged -= OnPlayersChanged;
 			Lobby.Current.OnMatchRuleChanged -= OnMatchRuleChanged;
@@ -59,10 +66,33 @@ public class LobbyUi : MonoBehaviour
 	#endregion
 
 	#region Life cycle
-	public void LeaveLobby()
+	public void OnCloseButtonClicked()
 	{
-		// TODO: Notify host as player
+		if(Lobby.Current?.IsHost ?? true)
+			HostLobby.Current?.Dismiss();
+		else
+			LeaveLobby();
+	}
+
+	void ReturnToStartMenu()
+	{
 		GameManager.Instance.SwitchScene(GameScene.StartMenu);
+	}
+
+	void LeaveLobby()
+	{
+		GameManager.Instance.ExitLobby();
+	}
+
+	void OnLobbyDismissed()
+	{
+		// TODO: Show message
+		ReturnToStartMenu();
+	}
+
+	void OnStartingMatch()
+	{
+		GameManager.Instance.SwitchScene(GameScene.Match);
 	}
 	#endregion
 
@@ -107,25 +137,9 @@ public class LobbyUi : MonoBehaviour
 
 	void RefreshLobbySettingsUi()
 	{
-		if(Lobby.Current.Visibility != LobbyVisibility.Public)
-			lobbyNameRow.SetActive(false);
-		else
-		{
-			lobbyNameRow.SetActive(true);
-			// TODO: Fill in lobby name text.
-		}
-
-		if(Lobby.Current.Visibility != LobbyVisibility.Private)
-			invitationCodeRow.SetActive(false);
-		else
-		{
-			invitationCodeRow.SetActive(true);
-			invitationCodeText.text = "KFCTHURVME50";  // TODO
-		}
+		invitationCodeRow.SetActive(Lobby.Current.Visibility == LobbyVisibility.Private);
+		invitationCodeText.text = Lobby.Current?.GetInvitationCode();
 	}
-
-	[SerializeField] GameObject lobbyNameRow;
-	[SerializeField] InputField lobbyNameInput;
 
 	[SerializeField] GameObject invitationCodeRow;
 	[SerializeField] Text invitationCodeText;
@@ -134,13 +148,13 @@ public class LobbyUi : MonoBehaviour
 	#region Player settings
 	[Header("Player settings")]
 	[SerializeField] Transform playerSlotList;
-	static GameObject playerSlotPrefab;
 
 	[SerializeField] Button addPlayerButton;
 
 	void OnPlayersChanged()
 	{
 		ReconstructPlayerSlots();
+		RefreshFooterArea();
 	}
 
 	void ReconstructPlayerSlots()
@@ -148,11 +162,7 @@ public class LobbyUi : MonoBehaviour
 		GameUtility.ClearChildren(playerSlotList);
 
 		foreach(var player in Lobby.Current.Players)
-		{
-			var slotGo = Instantiate(playerSlotPrefab, playerSlotList);
-			var slot = slotGo.GetComponent<LobbyPlayerSlot>();
-			slot.Descriptor = player;
-		}
+			LobbyPlayerSlot.Make(player, playerSlotList);
 
 		addPlayerButton.interactable = Lobby.Current.IsHost && Lobby.Current.Players.Count < 4;
 	}
@@ -171,31 +181,37 @@ public class LobbyUi : MonoBehaviour
 	[SerializeField] Text stoneHardnessText;
 	[SerializeField] Slider stoneHardnessSlider;
 
-	static readonly MatchMode[] allMatchModes = new MatchMode[]
-	{
-		MatchMode.Traditional,
-		MatchMode.Training,
-	};
-
-	readonly List<MatchMode> matchModeOptions = new();
-	void SetMatchModeOptions(IList<MatchMode> options)
+	readonly List<MatchModeConfig> matchModeOptions = new();
+	void SetMatchModeOptions(IReadOnlyList<MatchModeConfig> options)
 	{
 		matchModeOptions.Clear();
-		matchModeOptions.AddRange(options);
+		matchModeOptions.AddRange(options.Where(o => o != null));
+
 		matchModeDropdown.options = matchModeOptions
-			.Select(m => new Dropdown.OptionData(m.ToLocalizedString()))
+			.Select(m => new Dropdown.OptionData(m.DisplayName))
 			.ToList();
 
-		int index = matchModeOptions.IndexOf(Lobby.Current.MatchRule.mode);
+		int index = matchModeOptions.FindIndex(m => m.ModeId == Lobby.Current.MatchRule.modeId);
 		if(index == -1)
+		{
+			if(matchModeOptions.Count == 0)
+			{
+				matchModeDropdown.value = 0;
+				return;
+			}
 			index = 0;
+		}
+
 		matchModeDropdown.value = index;
 	}
 
 	void OnMatchModeDropdownValueChanged(int index)
 	{
+		if(!matchModeOptions.IsValidIndex(index))
+			return;
+
 		var rule = Lobby.Current.MatchRule;
-		rule.mode = matchModeOptions[index];
+		rule.modeId = matchModeOptions[index].ModeId;
 		HostLobby.Current?.SetMatchRule(rule);
 	}
 
@@ -216,6 +232,7 @@ public class LobbyUi : MonoBehaviour
 	void OnMatchRuleChanged()
 	{
 		RefreshMatchRuleArea();
+		RefreshFooterArea();
 	}
 
 	void RefreshMatchRuleArea()
@@ -235,21 +252,21 @@ public class LobbyUi : MonoBehaviour
 
 	void RefreshFooterArea()
 	{
-		bool valid = ValidateStartingCondition(out string errorMessage);
+		if(!Lobby.Current.IsHost)
+		{
+			errorText.gameObject.SetActive(false);
+			return;
+		}
+
+		bool valid = Lobby.Current.ValidateStartingCondition(out string errorMessage);
 		startButton.interactable = valid;
 		errorText.gameObject.SetActive(!valid);
 		errorText.text = errorMessage;
 	}
 
-	bool ValidateStartingCondition(out string errorMessage)
-	{
-		errorMessage = null;
-		return true;
-	}
-
 	public void OnStartButtonClicked()
 	{
-		// TODO
+		HostLobby.Current?.StartMatch();
 	}
 	#endregion
 }

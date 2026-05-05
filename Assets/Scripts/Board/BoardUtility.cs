@@ -176,12 +176,12 @@ public static class BoardUtility
 		return chainStats;
 	}
 
-	public static int GetChainLabelAtLogicalPosition(BoardCaches c, BoardState renderState, Vector2 logicalPosition)
+	public static int GetChainLabelAtAbsolutePosition(BoardCaches c, BoardState renderState, Vector2 absolutePosition)
 	{
 		if(!c.isInitialized || c.activeLabelBuffer == null || renderState == null)
 			return -1;
 
-		int pixelIndex = LogicalPositionToPixelIndex(renderState, logicalPosition);
+		int pixelIndex = AbsolutePositionToPixelIndex(renderState, absolutePosition);
 		if(pixelIndex < 0)
 			return -1;
 
@@ -190,18 +190,28 @@ public static class BoardUtility
 		return label[0];
 	}
 
-	public static bool IsOccupiedAtLogicalPosition(BoardCaches c, BoardState renderState, Vector2 logicalPosition)
+	public static bool IsOccupiedAtAbsolutePosition(BoardCaches c, BoardState renderState, Vector2 absolutePosition)
 	{
 		if(!c.isInitialized || c.ownerBuffer == null || renderState == null)
 			return false;
 
-		int pixelIndex = LogicalPositionToPixelIndex(renderState, logicalPosition);
+		int pixelIndex = AbsolutePositionToPixelIndex(renderState, absolutePosition);
 		if(pixelIndex < 0)
 			return false;
 
 		int[] owner = new int[1];
 		c.ownerBuffer.GetData(owner, 0, pixelIndex, 1);
 		return owner[0] >= 0;
+	}
+
+	public static int GetChainLabelAtLogicalPosition(BoardCaches c, BoardState renderState, Vector2 logicalPosition)
+	{
+		return GetChainLabelAtAbsolutePosition(c, renderState, logicalPosition);
+	}
+
+	public static bool IsOccupiedAtLogicalPosition(BoardCaches c, BoardState renderState, Vector2 logicalPosition)
+	{
+		return IsOccupiedAtAbsolutePosition(c, renderState, logicalPosition);
 	}
 
 	public static List<List<int>> GetStoneChainLabels(BoardCaches c, BoardState renderState)
@@ -215,11 +225,59 @@ public static class BoardUtility
 			IReadOnlyList<StonePlacement> stones = renderState.GetStones(player);
 			List<int> playerLabels = new(stones.Count);
 			for(int i = 0; i < stones.Count; ++i)
-				playerLabels.Add(GetChainLabelAtLogicalPosition(c, renderState, stones[i].position));
+				playerLabels.Add(GetChainLabelAtAbsolutePosition(c, renderState, stones[i].position));
 			labelsByPlayer.Add(playerLabels);
 		}
 
 		return labelsByPlayer;
+	}
+
+	/// <summary>
+	/// Standard Go placement rule: occupancy check, suicide check, capture.
+	/// Caches must be current for <paramref name="state"/> before calling.
+	/// On success, caches are left reflecting <paramref name="newState"/>.
+	/// </summary>
+	public static bool TryPlaceStoneStandard(
+		BoardCaches c,
+		BoardState state,
+		int player,
+		Vector2 position,
+		out BoardState newState,
+		float strength = 1)
+	{
+		newState = null;
+		if(player < 0 || player >= state.PlayerCount) return false;
+		if(strength <= 0) return false;
+		if(position.x < 0 || position.x >= state.Size || position.y < 0 || position.y >= state.Size) return false;
+		if(IsOccupiedAtAbsolutePosition(c, state, position)) return false;
+
+		BoardState previewState = new(state);
+		previewState.AddStone(player, position, strength);
+
+		RunGameplayAnalysis(c, previewState);
+
+		List<ChainStat> chainStats = GetChainStats(c);
+		Dictionary<int, ChainStat> chainStatsByRoot = new(chainStats.Count);
+		HashSet<int> capturedRoots = new();
+
+		for(int i = 0; i < chainStats.Count; ++i)
+		{
+			ChainStat cs = chainStats[i];
+			chainStatsByRoot[cs.rootLabel] = cs;
+			if(cs.owner != player && cs.hasLiberty == 0)
+				capturedRoots.Add(cs.rootLabel);
+		}
+
+		int placedRoot = GetChainLabelAtAbsolutePosition(c, previewState, position);
+		bool hasLiberty = chainStatsByRoot.TryGetValue(placedRoot, out ChainStat placedStat) && placedStat.hasLiberty != 0;
+		if(capturedRoots.Count == 0 && !hasLiberty)
+			return false;
+
+		if(capturedRoots.Count > 0)
+			RemoveCapturedStonesStandard(c, previewState, capturedRoots, player);
+
+		newState = previewState;
+		return true;
 	}
 
 	#endregion
@@ -238,6 +296,32 @@ public static class BoardUtility
 	#endregion
 
 	#region Private computation
+
+	static void RunGameplayAnalysis(BoardCaches c, BoardState state)
+	{
+		RenderDistributionMap(c, state);
+		RenderTerritoryMap(c, state, System.Array.Empty<Color>());
+		RunDominantAreaStats(c, state);
+		RunConnectedComponents(c);
+		RunChainStats(c);
+	}
+
+	static void RemoveCapturedStonesStandard(BoardCaches c, BoardState state, HashSet<int> capturedRoots, int currentPlayer)
+	{
+		List<List<int>> stoneChainLabels = GetStoneChainLabels(c, state);
+		for(int player = 0; player < state.PlayerCount; ++player)
+		{
+			if(player == currentPlayer)
+				continue;
+
+			List<int> playerLabels = stoneChainLabels[player];
+			for(int stoneIndex = playerLabels.Count - 1; stoneIndex >= 0; --stoneIndex)
+			{
+				if(capturedRoots.Contains(playerLabels[stoneIndex]))
+					state.RemoveStoneAt(player, stoneIndex);
+			}
+		}
+	}
 
 	static void RenderDistributionMap(BoardCaches c, BoardState state)
 	{
@@ -380,16 +464,16 @@ public static class BoardUtility
 		c.distributionShader.Dispatch(c.accumulateChainStatsKernel, groupsX, groupsY, 1);
 	}
 
-	static int LogicalPositionToPixelIndex(BoardState renderState, Vector2 logicalPosition)
+	static int AbsolutePositionToPixelIndex(BoardState renderState, Vector2 absolutePosition)
 	{
-		float span = renderState.Size - 1;
-		if(logicalPosition.x < 0 || logicalPosition.x > span)
+		float span = renderState.BoardStateExtent;
+		if(absolutePosition.x < 0 || absolutePosition.x > span)
 			return -1;
-		if(logicalPosition.y < 0 || logicalPosition.y > span)
+		if(absolutePosition.y < 0 || absolutePosition.y > span)
 			return -1;
 
-		float normalizedX = Mathf.Clamp01(logicalPosition.x / span);
-		float normalizedY = Mathf.Clamp01(logicalPosition.y / span);
+		float normalizedX = Mathf.Clamp01(absolutePosition.x / span);
+		float normalizedY = Mathf.Clamp01(absolutePosition.y / span);
 		int pixelX = Mathf.Clamp(Mathf.RoundToInt(normalizedX * (ComputeTextureSize - 1)), 0, ComputeTextureSize - 1);
 		int pixelY = Mathf.Clamp(Mathf.RoundToInt(normalizedY * (ComputeTextureSize - 1)), 0, ComputeTextureSize - 1);
 		return pixelY * ComputeTextureSize + pixelX;

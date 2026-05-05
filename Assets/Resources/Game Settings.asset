@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a26451c2c415be44a9a63f82d818256b, type: 3}
+  m_Name: Game Settings
+  m_EditorClassIdentifier: 
+  defaultMatchModeId: traditional
+  defaultMatchSkinPrefab: {fileID: 3292742582923757440, guid: eb8a6146621f6d5459af132a1822be4c, type: 3}
+  legacyMatchModes:
+  - {fileID: 11400000, guid: e57dd985eca19df44bf15634ad27a8fb, type: 2}
+  - {fileID: 11400000, guid: 2bcae83d97d660f488839c78f4b7c79f, type: 2}
+  legacyAis:
+  - {fileID: 11400000, guid: 296b6405bad1d49458d5c56bd2246ce8, type: 2}
+  - {fileID: 11400000, guid: 4eeb55ebf20adcf4290fae2e269709c8, type: 2}
+  availablePlayerColors:
+  - name: "\u9ED1"
+    color: {r: 0, g: 0, b: 0, a: 1}
+  - name: "\u767D"
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - name: "\u7EA2"
+    color: {r: 1, g: 0, b: 0, a: 1}
+  - name: "\u7EFF"
+    color: {r: 0, g: 1, b: 0, a: 1}
+  - name: "\u84DD"
+    color: {r: 0, g: 0, b: 1, a: 1}
+  - name: "\u9EC4"
+    color: {r: 1, g: 1, b: 0, a: 1}

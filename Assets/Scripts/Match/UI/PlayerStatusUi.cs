@@ -10,6 +10,7 @@ public class PlayerStatusUi : MonoBehaviour
 	{
 		Match.OnStateChanged += RefreshAreas;
 		Match.OnCurrentPlayerChanged += HighlightCurrentPlayer;
+		Match.OnPlayerPassStateChanged += OnPassStateChanged;
 	}
 
 	protected void Start()
@@ -25,6 +26,7 @@ public class PlayerStatusUi : MonoBehaviour
 		{
 			Match.OnStateChanged -= RefreshAreas;
 			Match.OnCurrentPlayerChanged -= HighlightCurrentPlayer;
+			Match.OnPlayerPassStateChanged -= OnPassStateChanged;
 		}
 	}
 	#endregion
@@ -43,6 +45,7 @@ public class PlayerStatusUi : MonoBehaviour
 			row.gameObject.name = $"PlayerRow{i}";
 			row.Name = Match.PlayerInfos[i].name;
 			row.Color = Match.PlayerInfos[i].color;
+			row.IsPassed = false;
 			rows.Add(row);
 		}
 	}
@@ -75,6 +78,12 @@ public class PlayerStatusUi : MonoBehaviour
 	{
 		for(int i = 0; i < rows.Count; ++i)
 			rows[i].IsCurrent = i == currentPlayer;
+	}
+
+	void OnPassStateChanged(int playerIndex, bool passed)
+	{
+		if(playerIndex >= 0 && playerIndex < rows.Count)
+			rows[playerIndex].IsPassed = passed;
 	}
 	#endregion
 }
