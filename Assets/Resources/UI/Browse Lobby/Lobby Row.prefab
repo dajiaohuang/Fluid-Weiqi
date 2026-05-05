@@ -1,84 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1813351055425340898
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 9014744773440617378}
-  - component: {fileID: 3662621124983895852}
-  - component: {fileID: 6252350957531234496}
-  m_Layer: 5
-  m_Name: Lobby Name Text
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &9014744773440617378
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1813351055425340898}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5242726673090348482}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &3662621124983895852
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1813351055425340898}
-  m_CullTransparentMesh: 1
---- !u!114 &6252350957531234496
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1813351055425340898}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 12800000, guid: 72f6feaae4b42f042a9bcc15e19b0901, type: 3}
-    m_FontSize: 40
-    m_FontStyle: 0
-    m_BestFit: 0
-    m_MinSize: 4
-    m_MaxSize: 40
-    m_Alignment: 4
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
-    m_LineSpacing: 1
-  m_Text: "\u5BF9\u5C40\u540D\n"
 --- !u!1 &2294223038797104374
 GameObject:
   m_ObjectHideFlags: 0
@@ -112,7 +33,6 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
-  - {fileID: 9014744773440617378}
   - {fileID: 4797665425789758490}
   - {fileID: 85292078861404151}
   - {fileID: 2835446837099080999}
@@ -155,7 +75,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c83d2a4ef6dd1224fa8d9b1886f1fb08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lobbyNameText: {fileID: 6252350957531234496}
+  lobbyNameText: {fileID: 0}
   hostNameText: {fileID: 699226823756477895}
   joinButton: {fileID: 6534508711997304831}
 --- !u!222 &4420856592184114312
@@ -365,6 +285,34 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5242726673090348482}
     m_Modifications:
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 5208547855262698611}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnJoinButtonClicked
+      objectReference: {fileID: 0}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: LobbyRow, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 3616054945711567324, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 5753476330380227332, guid: 15e53e8486ac1de42b691b9d3f50e46a, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5

@@ -31,7 +31,6 @@ public class LobbyUi : MonoBehaviour
 		SetVisibilityOptions(allVisibilityOptions);
 		visibilityDropdown.interactable = Lobby.Current.IsHost;
 		visibilityDropdown.onValueChanged.AddListener(OnVisibilityDropdownValueChanged);
-		lobbyNameInput.interactable = Lobby.Current.IsHost;
 		Lobby.Current.OnVisibilityChanged += OnVisibilityChanged;
 		RefreshLobbySettingsUi();
 
@@ -138,20 +137,9 @@ public class LobbyUi : MonoBehaviour
 
 	void RefreshLobbySettingsUi()
 	{
-		if(Lobby.Current.Visibility != LobbyVisibility.Public)
-			lobbyNameRow.SetActive(false);
-		else
-		{
-			lobbyNameRow.SetActive(true);
-			// TODO: Fill in lobby name text.
-		}
-
 		invitationCodeRow.SetActive(Lobby.Current.Visibility == LobbyVisibility.Private);
 		invitationCodeText.text = Lobby.Current?.GetInvitationCode();
 	}
-
-	[SerializeField] GameObject lobbyNameRow;
-	[SerializeField] InputField lobbyNameInput;
 
 	[SerializeField] GameObject invitationCodeRow;
 	[SerializeField] Text invitationCodeText;

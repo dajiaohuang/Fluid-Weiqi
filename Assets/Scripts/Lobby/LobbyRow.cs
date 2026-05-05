@@ -4,7 +4,6 @@ using System;
 
 public class LobbyRow : MonoBehaviour
 {
-	[SerializeField] Text lobbyNameText;
 	[SerializeField] Text hostNameText;
 	[SerializeField] Button joinButton;
 
@@ -13,8 +12,8 @@ public class LobbyRow : MonoBehaviour
 	public void Bind(LobbySnapshot snapshot, Action onJoinCallback)
 	{
 		gameObject.SetActive(true);
-		lobbyNameText.text = snapshot.lobbyName;
-		hostNameText.text = snapshot.hostName;
+		if(hostNameText != null)
+			hostNameText.text = snapshot.hostName;
 		onJoin = onJoinCallback;
 		joinButton.interactable = true;
 	}

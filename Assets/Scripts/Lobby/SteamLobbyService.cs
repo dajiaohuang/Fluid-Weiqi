@@ -93,9 +93,8 @@ public class SteamLobbyService : ILobbyService
 				if(!TryBuildPublicLobbySnapshot(lobbyId, out LobbySnapshot snapshot))
 					continue;
 
-				string lobbyName = snapshot.lobbyName;
 				if(!string.IsNullOrEmpty(nameFilter) &&
-				   !lobbyName.Contains(nameFilter, StringComparison.OrdinalIgnoreCase))
+				   !snapshot.hostName.Contains(nameFilter, StringComparison.OrdinalIgnoreCase))
 					continue;
 
 				if(matchedCount++ < offset)
@@ -206,6 +205,8 @@ public class SteamLobbyService : ILobbyService
 					continue;
 				if(isPlaying || openOnlineSlots <= 0)
 					continue;
+				if(!HasSteamMemberCapacity(lobbyId))
+					continue;
 				if(!string.Equals(codeValue, invitationCode, StringComparison.OrdinalIgnoreCase))
 					continue;
 
@@ -228,10 +229,12 @@ public class SteamLobbyService : ILobbyService
 			return false;
 		if(!string.IsNullOrEmpty(codeValue) || isPlaying || openOnlineSlots <= 0)
 			return false;
-
-		string lobbyName = SteamMatchmaking.GetLobbyData(lobbyId, KeyName);
-		if(string.IsNullOrWhiteSpace(lobbyName))
+		if(!HasSteamMemberCapacity(lobbyId))
 			return false;
+
+		string hostName = SteamMatchmaking.GetLobbyData(lobbyId, KeyName);
+		if(string.IsNullOrWhiteSpace(hostName))
+			hostName = "Unknown";
 
 		int currentPlayers = lobbyState.players != null ? lobbyState.players.Count : 0;
 		int.TryParse(SteamMatchmaking.GetLobbyData(lobbyId, KeyMax), out int maxPlayers);
@@ -241,12 +244,21 @@ public class SteamLobbyService : ILobbyService
 		snapshot = new LobbySnapshot
 		{
 			lobbyId = lobbyId.m_SteamID.ToString(),
-			lobbyName = lobbyName,
-			hostName = lobbyName,
+			hostName = hostName,
 			currentPlayers = currentPlayers,
 			maxPlayers = maxPlayers,
 		};
 		return true;
+	}
+
+	static bool HasSteamMemberCapacity(CSteamID lobbyId)
+	{
+		int limit = SteamMatchmaking.GetLobbyMemberLimit(lobbyId);
+		if(limit <= 0)
+			return true;
+
+		int memberCount = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
+		return memberCount < limit;
 	}
 
 	static bool TryGetLobbyState(CSteamID lobbyId, out LobbySyncSnapshot snapshot, out string codeValue, out bool isPlaying, out int openOnlineSlots)
